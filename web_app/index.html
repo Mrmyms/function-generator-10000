@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Function Generator 10000 | 1 MSPS Dual-Channel Lab Synthesizer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #070d12;
+      --card-bg: #0c161d;
+      --card-border: #142834;
+      --text: #c2d6e3;
+      --text-dim: #607d8b;
+      --ch1: #38bdf8;
+      --ch1-glow: rgba(56, 189, 248, 0.35);
+      --ch2: #f59e0b;
+      --ch2-glow: rgba(245, 158, 11, 0.35);
+      --green: #10b981;
+      --red: #ef4444;
+      --accent: #6366f1;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Outfit', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    header {
+      background: #09131a;
+      border-bottom: 1px solid var(--card-border);
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-badge {
+      background: linear-gradient(135deg, #38bdf8, #6366f1);
+      color: #fff;
+      font-weight: 800;
+      font-size: 13px;
+      padding: 5px 9px;
+      border-radius: 6px;
+      letter-spacing: 1px;
+    }
+
+    .brand h1 {
+      font-size: 19px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      color: #fff;
+    }
+
+    .brand span {
+      font-size: 12px;
+      color: var(--text-dim);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      padding: 6px 12px;
+      background: rgba(12, 22, 29, 0.9);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--red);
+      box-shadow: 0 0 8px var(--red);
+    }
+    .status-dot.connected {
+      background: var(--green);
+      box-shadow: 0 0 10px var(--green);
+    }
+
+    .btn-ble {
+      background: linear-gradient(135deg, #2563eb, #6366f1);
+      color: #fff;
+      border: none;
+      padding: 8px 18px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
+    }
+    .btn-ble:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(37, 99, 235, 0.6);
+    }
+
+    main {
+      flex: 1;
+      padding: 20px 24px;
+      max-width: 1440px;
+      width: 100%;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* Waveform Preview Canvas */
+    .preview-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 16px;
+      position: relative;
+    }
+
+    .preview-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .preview-title {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-dim);
+    }
+
+    .preview-stats {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      display: flex;
+      gap: 16px;
+    }
+
+    canvas#previewCanvas {
+      width: 100%;
+      height: 180px;
+      background: #060b0f;
+      border-radius: 8px;
+      display: block;
+      border: 1px solid #101c24;
+    }
+
+    /* Dual Channel Grid */
+    .channels-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    @media (max-width: 900px) {
+      .channels-grid { grid-template-columns: 1fr; }
+    }
+
+    .ch-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      position: relative;
+      overflow: hidden;
+    }
+    .ch-card.ch1 { border-top: 3px solid var(--ch1); }
+    .ch-card.ch2 { border-top: 3px solid var(--ch2); }
+
+    .ch-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .ch-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 17px;
+      font-weight: 700;
+    }
+    .ch1 .ch-title { color: var(--ch1); }
+    .ch2 .ch-title { color: var(--ch2); }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+    }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider-toggle {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #1e3340;
+      transition: .3s;
+      border-radius: 24px;
+    }
+    .slider-toggle:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+    .ch1 input:checked + .slider-toggle { background-color: var(--ch1); }
+    .ch2 input:checked + .slider-toggle { background-color: var(--ch2); }
+    input:checked + .slider-toggle:before { transform: translateX(20px); }
+
+    /* Waveform selector */
+    .wave-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+    .wave-btn {
+      background: #09131a;
+      border: 1px solid var(--card-border);
+      color: var(--text-dim);
+      padding: 10px 4px;
+      border-radius: 8px;
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.2s;
+    }
+    .wave-btn:hover { border-color: #27475c; color: #fff; }
+    .ch1 .wave-btn.active {
+      background: rgba(56, 189, 248, 0.12);
+      border-color: var(--ch1);
+      color: var(--ch1);
+      box-shadow: 0 0 12px var(--ch1-glow);
+    }
+    .ch2 .wave-btn.active {
+      background: rgba(245, 158, 11, 0.12);
+      border-color: var(--ch2);
+      color: var(--ch2);
+      box-shadow: 0 0 12px var(--ch2-glow);
+    }
+
+    /* Controls block */
+    .control-row {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .control-lbl {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-dim);
+    }
+    .control-val {
+      font-family: 'JetBrains Mono', monospace;
+      color: #fff;
+      font-size: 13px;
+    }
+
+    .presets-row {
+      display: flex;
+      gap: 6px;
+      margin-top: 4px;
+    }
+    .preset-btn {
+      background: #0b1820;
+      border: 1px solid var(--card-border);
+      color: var(--text);
+      font-size: 10px;
+      font-family: 'JetBrains Mono', monospace;
+      padding: 3px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .preset-btn:hover { background: #162c3b; color: #fff; }
+
+    input[type=range] {
+      -webkit-appearance: none;
+      width: 100%;
+      background: transparent;
+    }
+    input[type=range]:focus { outline: none; }
+    input[type=range]::-webkit-slider-runnable-track {
+      width: 100%;
+      height: 6px;
+      cursor: pointer;
+      background: #142834;
+      border-radius: 3px;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      height: 18px;
+      width: 18px;
+      border-radius: 50%;
+      background: #fff;
+      cursor: pointer;
+      -webkit-appearance: none;
+      margin-top: -6px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+    }
+    .ch1 input[type=range]::-webkit-slider-thumb { background: var(--ch1); }
+    .ch2 input[type=range]::-webkit-slider-thumb { background: var(--ch2); }
+
+    /* AWG Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.8);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal.active { display: flex; }
+    .modal-content {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      width: 90%;
+      max-width: 650px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    canvas#awgCanvas {
+      width: 100%;
+      height: 200px;
+      background: #060b0f;
+      border: 1px solid #101c24;
+      border-radius: 8px;
+      cursor: crosshair;
+    }
+    .btn-action {
+      background: var(--ch1);
+      color: #000;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 6px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <div class="logo-badge">1 MSPS</div>
+      <div>
+        <h1>FUNCTION GENERATOR 10000</h1>
+        <span>STM32 MB1814 (12-bit Dual DAC) + ESP32 BLE Wireless</span>
+      </div>
+    </div>
+    <div class="header-actions">
+      <div class="status-badge">
+        <div class="status-dot" id="bleDot"></div>
+        <span id="bleStatus">BLE Disconnected</span>
+        <span id="rttStat" style="color:var(--ch1); margin-left:6px; display:none;">-- ms</span>
+      </div>
+      <button class="btn-ble" id="btnConnect" onclick="toggleBLE()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m7 7 10 10-5 5V2l5 5L7 17"/></svg>
+        <span>Connect BLE</span>
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <!-- Waveform Live Visualizer -->
+    <div class="preview-card">
+      <div class="preview-header">
+        <span class="preview-title">Real-Time Waveform Output (1 MSPS Hardware Synthesis)</span>
+        <div class="preview-stats">
+          <span style="color:var(--ch1)">CH1: <strong id="lbl-ch1-f">1000 Hz</strong> (<span id="lbl-ch1-w">SINE</span>)</span>
+          <span style="color:var(--ch2)">CH2: <strong id="lbl-ch2-f">1000 Hz</strong> (<span id="lbl-ch2-w">SINE</span>)</span>
+          <span style="color:var(--text-dim)">Sampling: <strong>1.00 MSPS (1µs)</strong></span>
+        </div>
+      </div>
+      <canvas id="previewCanvas"></canvas>
+    </div>
+
+    <!-- Dual Channels Configuration Grid -->
+    <div class="channels-grid">
+
+      <!-- CHANNEL 1 (PA4 DAC1_CH1) -->
+      <div class="ch-card ch1">
+        <div class="ch-header">
+          <div class="ch-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 12s1.5-4 4-4 4 4 4 4"/></svg>
+            <span>CHANNEL 1 (PA4 DAC)</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="ch1-en" checked onchange="updateCh(1)">
+            <span class="slider-toggle"></span>
+          </label>
+        </div>
+
+        <div class="wave-grid">
+          <div class="wave-btn active" onclick="setWave(1,'s')">SINE</div>
+          <div class="wave-btn" onclick="setWave(1,'q')">SQUARE</div>
+          <div class="wave-btn" onclick="setWave(1,'t')">TRIANGLE</div>
+          <div class="wave-btn" onclick="setWave(1,'a')">SAW</div>
+          <div class="wave-btn" onclick="setWave(1,'p')">PWM</div>
+          <div class="wave-btn" onclick="setWave(1,'n')">NOISE</div>
+          <div class="wave-btn" onclick="openAwgModal(1)">AWG ✎</div>
+          <div class="wave-btn" onclick="setSweep(1)">SWEEP</div>
+        </div>
+
+        <div class="control-row">
+          <div class="control-lbl">
+            <span>FREQUENCY</span>
+            <span class="control-val" id="val-ch1-freq">1,000 Hz</span>
+          </div>
+          <input type="range" id="rng-ch1-freq" min="1" max="100000" step="1" value="1000" oninput="onFreqSlide(1, this.value)">
+          <div class="presets-row">
+            <button class="preset-btn" onclick="setFreq(1, 100)">100Hz</button>
+            <button class="preset-btn" onclick="setFreq(1, 1000)">1kHz</button>
+            <button class="preset-btn" onclick="setFreq(1, 10000)">10kHz</button>
+            <button class="preset-btn" onclick="setFreq(1, 50000)">50kHz</button>
+            <button class="preset-btn" onclick="setFreq(1, 100000)">100kHz</button>
+          </div>
+        </div>
+
+        <div class="control-row">
+          <div class="control-lbl">
+            <span>AMPLITUDE (Vpp)</span>
+            <span class="control-val" id="val-ch1-amp">100% (3.3V)</span>
+          </div>
+          <input type="range" id="rng-ch1-amp" min="0" max="100" value="100" oninput="updateCh(1)">
+        </div>
+
+        <div class="control-row">
+          <div class="control-lbl">
+            <span>DC OFFSET</span>
+            <span class="control-val" id="val-ch1-off">0 mV</span>
+          </div>
+          <input type="range" id="rng-ch1-off" min="-128" max="127" value="0" oninput="updateCh(1)">
+        </div>
+
+        <div class="control-row" id="row-ch1-duty">
+          <div class="control-lbl">
+            <span>DUTY CYCLE / PULSE WIDTH</span>
+            <span class="control-val" id="val-ch1-duty">50%</span>
+          </div>
+          <input type="range" id="rng-ch1-duty" min="1" max="99" value="50" oninput="updateCh(1)">
+        </div>
+      </div>
+
+      <!-- CHANNEL 2 (PA5 DAC1_CH2) -->
+      <div class="ch-card ch2">
+        <div class="ch-header">
+          <div class="ch-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 12s1.5-4 4-4 4 4 4 4"/></svg>
+            <span>CHANNEL 2 (PA5 DAC)</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="ch2-en" checked onchange="updateCh(2)">
+            <span class="slider-toggle"></span>
+          </label>
+        </div>
+
+        <div class="wave-grid">
+          <div class="wave-btn active" onclick="setWave(2,'s')">SINE</div>
+          <div class="wave-btn" onclick="setWave(2,'q')">SQUARE</div>
+          <div class="wave-btn" onclick="setWave(2,'t')">TRIANGLE</div>
+          <div class="wave-btn" onclick="setWave(2,'a')">SAW</div>
+          <div class="wave-btn" onclick="setWave(2,'p')">PWM</div>
+          <div class="wave-btn" onclick="setWave(2,'n')">NOISE</div>
+          <div class="wave-btn" onclick="openAwgModal(2)">AWG ✎</div>
+          <div class="wave-btn" onclick="setSweep(2)">SWEEP</div>
+        </div>
+
+        <div class="control-row">
+          <div class="control-lbl">
+            <span>FREQUENCY</span>
+            <span class="control-val" id="val-ch2-freq">1,000 Hz</span>
+          </div>
+          <input type="range" id="rng-ch2-freq" min="1" max="100000" step="1" value="1000" oninput="onFreqSlide(2, this.value)">
+          <div class="presets-row">
+            <button class="preset-btn" onclick="setFreq(2, 100)">100Hz</button>
+            <button class="preset-btn" onclick="setFreq(2, 1000)">1kHz</button>
+            <button class="preset-btn" onclick="setFreq(2, 10000)">10kHz</button>
+            <button class="preset-btn" onclick="setFreq(2, 50000)">50kHz</button>
+            <button class="preset-btn" onclick="setFreq(2, 100000)">100kHz</button>
+          </div>
+        </div>
+
+        <div class="control-row">
+          <div class="control-lbl">
+            <span>AMPLITUDE (Vpp)</span>
+            <span class="control-val" id="val-ch2-amp">100% (3.3V)</span>
+          </div>
+          <input type="range" id="rng-ch2-amp" min="0" max="100" value="100" oninput="updateCh(2)">
+        </div>
+
+        <div class="control-row">
+          <div class="control-lbl">
+            <span>PHASE OFFSET (CH1 ↔ CH2)</span>
+            <span class="control-val" id="val-phase">0°</span>
+          </div>
+          <input type="range" id="rng-phase" min="0" max="360" value="0" oninput="onPhaseSlide(this.value)">
+        </div>
+
+        <div class="control-row" id="row-ch2-duty">
+          <div class="control-lbl">
+            <span>DUTY CYCLE / PULSE WIDTH</span>
+            <span class="control-val" id="val-ch2-duty">50%</span>
+          </div>
+          <input type="range" id="rng-ch2-duty" min="1" max="99" value="50" oninput="updateCh(2)">
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- AWG Drawer Modal -->
+  <div class="modal" id="awgModal">
+    <div class="modal-content">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h3 id="awgModalTitle">Arbitrary Waveform Painter</h3>
+        <button class="preset-btn" onclick="closeAwgModal()">✕ Close</button>
+      </div>
+      <p style="font-size:12px; color:var(--text-dim)">Draw your custom 64-point wave shape with your mouse or finger, or choose a math preset:</p>
+      <div style="display:flex; gap:8px;">
+        <button class="preset-btn" onclick="presetAwg('sinc')">Sinc(x)</button>
+        <button class="preset-btn" onclick="presetAwg('ecg')">ECG/Cardiac</button>
+        <button class="preset-btn" onclick="presetAwg('exp')">Exp Decay</button>
+        <button class="preset-btn" onclick="presetAwg('stair')">Staircase</button>
+        <button class="preset-btn" onclick="presetAwg('clear')">Clear (GND)</button>
+      </div>
+      <canvas id="awgCanvas"></canvas>
+      <div style="display:flex; justify-content:flex-end; gap:10px;">
+        <button class="btn-action" onclick="sendAwgToHardware()">Upload AWG to Hardware</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- BLE GATT UUIDs ---
+    const BLE_SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
+    const BLE_CHAR_CMD_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8";
+    const BLE_CHAR_TELEM_UUID = "1c95d5e3-d8f7-413a-bf3d-7a2e5d7be87e";
+
+    let bleDevice = null;
+    let cmdCharacteristic = null;
+    let telemCharacteristic = null;
+
+    // --- Generator State ---
+    const gen = {
+      ch1: { enabled: true, wave: 's', freq: 1000, amp: 100, off: 0, duty: 50 },
+      ch2: { enabled: true, wave: 's', freq: 1000, amp: 100, off: 0, duty: 50 },
+      phase: 0
+    };
+
+    // --- Web Bluetooth Connection ---
+    async function toggleBLE() {
+      if (bleDevice && bleDevice.gatt.connected) {
+        bleDevice.gatt.disconnect();
+        return;
+      }
+
+      try {
+        setBleStatus('Connecting...', false);
+        bleDevice = await navigator.bluetooth.requestDevice({
+          filters: [{ name: 'FuncGen-10000' }],
+          optionalServices: [BLE_SERVICE_UUID]
+        });
+
+        bleDevice.addEventListener('gattserverdisconnected', onDisconnected);
+        const server = await bleDevice.gatt.connect();
+        const service = await server.getPrimaryService(BLE_SERVICE_UUID);
+        
+        cmdCharacteristic = await service.getCharacteristic(BLE_CHAR_CMD_UUID);
+        telemCharacteristic = await service.getCharacteristic(BLE_CHAR_TELEM_UUID);
+
+        await telemCharacteristic.startNotifications();
+        telemCharacteristic.addEventListener('characteristicvaluechanged', onTelemetry);
+
+        setBleStatus('Connected (BLE)', true);
+        document.getElementById('btnConnect').innerHTML = `<span>Disconnect</span>`;
+        // Send initial state to hardware
+        updateCh(1);
+        updateCh(2);
+      } catch (err) {
+        console.error("BLE Error:", err);
+        setBleStatus('Disconnected', false);
+      }
+    }
+
+    function onDisconnected() {
+      setBleStatus('Disconnected', false);
+      document.getElementById('btnConnect').innerHTML = `<span>Connect BLE</span>`;
+      document.getElementById('rttStat').style.display = 'none';
+      cmdCharacteristic = null;
+    }
+
+    function setBleStatus(text, isConnected) {
+      document.getElementById('bleStatus').textContent = text;
+      document.getElementById('bleDot').classList.toggle('connected', isConnected);
+    }
+
+    function onTelemetry(event) {
+      const data = new DataView(event.target.value.buffer);
+      if (data.getUint8(0) === 0x80) { // PONG / Latency RTT
+        const rttUs = data.getUint16(1, true);
+        const rttEl = document.getElementById('rttStat');
+        rttEl.textContent = `${(rttUs / 1000).toFixed(1)} ms RTT`;
+        rttEl.style.display = 'inline';
+      }
+    }
+
+    // Binary transmission over BLE
+    async function sendCommandPacket(cmd, buffer) {
+      if (!cmdCharacteristic) return;
+      const packet = new Uint8Array(1 + buffer.byteLength);
+      packet[0] = cmd;
+      packet.set(new Uint8Array(buffer), 1);
+      try {
+        await cmdCharacteristic.writeValueWithoutResponse(packet);
+      } catch (e) {
+        console.warn("BLE Write error:", e);
+      }
+    }
+
+    // Build packed struct for ChannelPacket (29 bytes)
+    function buildChannelPacket(cfg) {
+      const buf = new ArrayBuffer(29);
+      const v = new DataView(buf);
+      v.setUint8(0, cfg.wave.charCodeAt(0));
+      v.setFloat32(1, cfg.freq, true);
+      v.setUint8(5, cfg.amp);
+      v.setInt8(6, cfg.off);
+      v.setUint8(7, cfg.enabled ? 1 : 0);
+      v.setUint8(8, cfg.duty);
+      v.setFloat32(9, 0, true);  // sweepTarget
+      v.setFloat32(13, 0, true); // sweepTimeMs
+      v.setUint8(17, 0);         // modType
+      v.setFloat32(18, 0, true); // modFreq
+      v.setUint8(22, 0);         // modDepth
+      v.setUint8(23, 0);         // burstEnabled
+      v.setUint32(24, 0, true);  // burstCycles
+      v.setUint8(28, 0);         // trigger
+      return buf;
+    }
+
+    function updateCh(ch) {
+      const c = (ch === 1) ? gen.ch1 : gen.ch2;
+      c.enabled = document.getElementById(`ch${ch}-en`).checked;
+      c.amp = parseInt(document.getElementById(`rng-ch${ch}-amp`).value);
+      c.off = parseInt(document.getElementById(`rng-ch${ch}-off`).value);
+      c.duty = parseInt(document.getElementById(`rng-ch${ch}-duty`).value);
+
+      document.getElementById(`val-ch${ch}-amp`).textContent = `${c.amp}% (${((c.amp/100)*3.3).toFixed(2)}V)`;
+      document.getElementById(`val-ch${ch}-off`).textContent = `${Math.round((c.off/128)*1650)} mV`;
+      document.getElementById(`val-ch${ch}-duty`).textContent = `${c.duty}%`;
+
+      sendCommandPacket(ch === 1 ? 0x01 : 0x02, buildChannelPacket(c));
+    }
+
+    function setFreq(ch, val) {
+      document.getElementById(`rng-ch${ch}-freq`).value = val;
+      onFreqSlide(ch, val);
+    }
+
+    function onFreqSlide(ch, val) {
+      const c = (ch === 1) ? gen.ch1 : gen.ch2;
+      c.freq = parseFloat(val);
+      document.getElementById(`val-ch${ch}-freq`).textContent = `${c.freq.toLocaleString()} Hz`;
+      document.getElementById(`lbl-ch${ch}-f`).textContent = `${c.freq.toLocaleString()} Hz`;
+      updateCh(ch);
+    }
+
+    function setWave(ch, w) {
+      const c = (ch === 1) ? gen.ch1 : gen.ch2;
+      c.wave = w;
+      const names = { s: 'SINE', q: 'SQUARE', t: 'TRIANGLE', a: 'SAW', p: 'PWM', n: 'NOISE', c: 'AWG' };
+      document.getElementById(`lbl-ch${ch}-w`).textContent = names[w] || 'CUSTOM';
+
+      // Update button active states
+      const card = document.querySelector(`.ch-card.ch${ch}`);
+      card.querySelectorAll('.wave-btn').forEach(b => b.classList.remove('active'));
+      event.target.classList.add('active');
+
+      updateCh(ch);
+    }
+
+    function onPhaseSlide(val) {
+      gen.phase = parseInt(val);
+      document.getElementById('val-phase').textContent = `${gen.phase}°`;
+
+      const buf = new ArrayBuffer(4);
+      new DataView(buf).setInt32(0, gen.phase, true);
+      sendCommandPacket(0x03, buf);
+    }
+
+    // --- Live Canvas Visualizer ---
+    const cvs = document.getElementById('previewCanvas');
+    const ctx = cvs.getContext('2d');
+    let phaseAcc1 = 0, phaseAcc2 = 0;
+
+    function renderPreview() {
+      cvs.width = cvs.clientWidth * window.devicePixelRatio;
+      cvs.height = cvs.clientHeight * window.devicePixelRatio;
+      ctx.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
+
+      const W = cvs.clientWidth, H = cvs.clientHeight;
+      ctx.fillStyle = '#060b0f';
+      ctx.fillRect(0, 0, W, H);
+
+      // Grid lines
+      ctx.strokeStyle = '#0e1d27';
+      ctx.lineWidth = 1;
+      for (let x = 0; x < W; x += W / 10) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+      for (let y = 0; y < H; y += H / 6) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+
+      const cy = H / 2;
+
+      // Draw Channel 1 (Cyan)
+      if (gen.ch1.enabled) {
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        for (let x = 0; x < W; x++) {
+          const t = (x / W) * (2 * Math.PI) * (gen.ch1.freq / 200) + phaseAcc1;
+          const y = cy - Math.sin(t) * (H * 0.38) * (gen.ch1.amp / 100);
+          if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+
+      // Draw Channel 2 (Amber)
+      if (gen.ch2.enabled) {
+        ctx.strokeStyle = '#f59e0b';
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        const pRad = gen.phase * (Math.PI / 180);
+        for (let x = 0; x < W; x++) {
+          const t = (x / W) * (2 * Math.PI) * (gen.ch2.freq / 200) + phaseAcc2 + pRad;
+          const y = cy - Math.sin(t) * (H * 0.38) * (gen.ch2.amp / 100);
+          if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+
+      phaseAcc1 += (gen.ch1.freq * 0.0001);
+      phaseAcc2 += (gen.ch2.freq * 0.0001);
+      requestAnimationFrame(renderPreview);
+    }
+    renderPreview();
+
+    // --- AWG Drawer Logic ---
+    let activeAwgCh = 1;
+    let awgSamples = new Uint8Array(64).fill(128);
+    const awgCvs = document.getElementById('awgCanvas');
+    const awgCtx = awgCvs.getContext('2d');
+    let isDrawing = false;
+
+    function openAwgModal(ch) {
+      activeAwgCh = ch;
+      document.getElementById('awgModalTitle').textContent = `Arbitrary Waveform Editor - Channel ${ch}`;
+      document.getElementById('awgModal').classList.add('active');
+      drawAwgCanvas();
+    }
+    function closeAwgModal() { document.getElementById('awgModal').classList.remove('active'); }
+
+    function drawAwgCanvas() {
+      awgCvs.width = awgCvs.clientWidth;
+      awgCvs.height = awgCvs.clientHeight;
+      const W = awgCvs.width, H = awgCvs.height;
+      awgCtx.fillStyle = '#060b0f';
+      awgCtx.fillRect(0, 0, W, H);
+
+      awgCtx.strokeStyle = '#10b981';
+      awgCtx.lineWidth = 2;
+      awgCtx.beginPath();
+      for (let i = 0; i < 64; i++) {
+        const x = (i / 63) * W;
+        const y = H - (awgSamples[i] / 255) * H;
+        if (i === 0) awgCtx.moveTo(x, y); else awgCtx.lineTo(x, y);
+      }
+      awgCtx.stroke();
+    }
+
+    awgCvs.addEventListener('mousedown', (e) => { isDrawing = true; setAwgPoint(e); });
+    window.addEventListener('mouseup', () => { isDrawing = false; });
+    awgCvs.addEventListener('mousemove', (e) => { if (isDrawing) setAwgPoint(e); });
+
+    function setAwgPoint(e) {
+      const rect = awgCvs.getBoundingClientRect();
+      const x = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+      const y = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
+      const idx = Math.floor((x / rect.width) * 64);
+      const val = Math.floor((1 - (y / rect.height)) * 255);
+      if (idx >= 0 && idx < 64) {
+        awgSamples[idx] = val;
+        drawAwgCanvas();
+      }
+    }
+
+    function presetAwg(type) {
+      for (let i = 0; i < 64; i++) {
+        const t = (i / 64) * 2 * Math.PI;
+        if (type === 'sinc') {
+          const x = (i - 32) * 0.3;
+          awgSamples[i] = Math.floor(128 + 120 * (x === 0 ? 1 : Math.sin(x) / x));
+        } else if (type === 'ecg') {
+          if (i === 20) awgSamples[i] = 230;
+          else if (i === 22) awgSamples[i] = 40;
+          else if (i > 35 && i < 48) awgSamples[i] = 160;
+          else awgSamples[i] = 128;
+        } else if (type === 'exp') {
+          awgSamples[i] = Math.floor(255 * Math.exp(-i / 14));
+        } else if (type === 'stair') {
+          awgSamples[i] = Math.floor((Math.floor(i / 8) / 8) * 255);
+        } else if (type === 'clear') {
+          awgSamples[i] = 128;
+        }
+      }
+      drawAwgCanvas();
+    }
+
+    async function sendAwgToHardware() {
+      // Send in 4 BLE packets of 16 samples
+      for (let c = 0; c < 4; c++) {
+        const chunk = new Uint8Array(17);
+        chunk[0] = activeAwgCh;
+        chunk.set(awgSamples.slice(c * 16, (c + 1) * 16), 1);
+        await sendCommandPacket(0x10 + c, chunk.buffer);
+      }
+      setWave(activeAwgCh, 'c');
+      closeAwgModal();
+      alert(`Custom waveform uploaded successfully to Channel ${activeAwgCh}!`);
+    }
+  </script>
+</body>
+</html>

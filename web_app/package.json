@@ -1,0 +1,11 @@
+{
+  "name": "function-generator-10000",
+  "version": "1.0.0",
+  "description": "Web Bluetooth Controller for Function Generator 10000 (1 MSPS Dual DAC STM32 + ESP32)",
+  "scripts": {
+    "start": "npx serve ."
+  },
+  "keywords": ["web-bluetooth", "function-generator", "stm32", "esp32", "dac", "1msps"],
+  "author": "",
+  "license": "MIT"
+}
