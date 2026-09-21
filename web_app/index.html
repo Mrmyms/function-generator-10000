@@ -3,132 +3,278 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Function Generator 10000 | 1 MSPS Dual-Channel Lab Synthesizer</title>
+  <title>FUNC_GEN (1) | Nothing OS Laboratory Synthesizer</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
+    /* ==========================================================================
+       NOTHING OS (R) DESIGN SYSTEM - FUNCTION GENERATOR (1)
+       Pure Void Black, Dot-Matrix Typography, Smoky Acrylic, Iconic Nothing Red
+       ========================================================================== */
     :root {
-      --bg: #070d12;
-      --card-bg: #0c161d;
-      --card-border: #142834;
-      --text: #c2d6e3;
-      --text-dim: #607d8b;
-      --ch1: #38bdf8;
-      --ch1-glow: rgba(56, 189, 248, 0.35);
-      --ch2: #f59e0b;
-      --ch2-glow: rgba(245, 158, 11, 0.35);
-      --green: #10b981;
-      --red: #ef4444;
-      --accent: #6366f1;
+      --bg: #000000;
+      --card-bg: #0c0c0c;
+      --card-subtle: #141414;
+      --card-elevated: #1a1a1a;
+      --card-border: rgba(255, 255, 255, 0.12);
+      --card-border-hover: rgba(255, 255, 255, 0.28);
+      --card-border-active: rgba(255, 255, 255, 0.6);
+      
+      --text: #f0f0f0;
+      --text-muted: #888888;
+      --text-dim: #4a4a4a;
+      
+      /* Iconic Nothing Red */
+      --red: #d71921;
+      --red-glow: rgba(215, 25, 33, 0.45);
+      --red-subtle: rgba(215, 25, 33, 0.15);
+      
+      /* Monochrome High-Contrast Accents */
+      --white: #ffffff;
+      --white-glow: rgba(255, 255, 255, 0.65);
+      --white-subtle: rgba(255, 255, 255, 0.08);
+      
+      --glyph-led: #ffffff;
+      --glyph-glow: 0 0 12px rgba(255, 255, 255, 0.9), 0 0 24px rgba(255, 255, 255, 0.45);
+      --glyph-off: #1e1e1e;
+      
+      --radius-sm: 8px;
+      --radius-md: 16px;
+      --radius-lg: 24px;
+      --radius-xl: 32px;
+      --radius-pill: 9999px;
+      
+      --font-ndot: 'Silkscreen', monospace;
+      --font-body: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    
     body {
       background: var(--bg);
       color: var(--text);
-      font-family: 'Outfit', sans-serif;
+      font-family: var(--font-body);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       overflow-x: hidden;
+      background-image: 
+        radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.03) 0%, transparent 65%),
+        radial-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+      background-size: 100% 100%, 24px 24px;
     }
 
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #080808; }
+    ::-webkit-scrollbar-thumb { background: #252525; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #3d3d3d; }
+
+    /* Dot Matrix Utilities */
+    .ndot {
+      font-family: var(--font-ndot);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+    
+    .tech-mono {
+      font-family: var(--font-mono);
+    }
+
+    /* Top Bar Header */
     header {
-      background: #09131a;
+      background: rgba(12, 12, 12, 0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
       border-bottom: 1px solid var(--card-border);
-      padding: 12px 24px;
+      padding: 14px 28px;
       display: flex;
       justify-content: space-between;
       align-items: center;
       position: sticky;
       top: 0;
-      z-index: 100;
+      z-index: 1000;
     }
 
-    .brand {
+    .brand-group {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 16px;
     }
 
-    .logo-badge {
-      background: linear-gradient(135deg, #38bdf8, #6366f1);
-      color: #fff;
-      font-weight: 800;
-      font-size: 13px;
-      padding: 5px 9px;
-      border-radius: 6px;
-      letter-spacing: 1px;
+    .brand-mark {
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
 
-    .brand h1 {
-      font-size: 19px;
+    .brand-title {
+      font-family: var(--font-ndot);
+      font-size: 20px;
       font-weight: 700;
+      letter-spacing: 2px;
+      color: var(--white);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .brand-red-dot {
+      width: 9px;
+      height: 9px;
+      background: var(--red);
+      border-radius: 50%;
+      display: inline-block;
+      box-shadow: 0 0 10px var(--red-glow);
+      animation: pulse-red 2.4s ease-in-out infinite;
+    }
+
+    @keyframes pulse-red {
+      0%, 100% { transform: scale(1); opacity: 0.9; }
+      50% { transform: scale(1.25); opacity: 1; box-shadow: 0 0 16px var(--red); }
+    }
+
+    .brand-sub {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
       letter-spacing: 0.5px;
-      color: #fff;
+      padding-left: 8px;
+      border-left: 1px solid var(--card-border);
     }
 
-    .brand span {
-      font-size: 12px;
-      color: var(--text-dim);
-      font-family: 'JetBrains Mono', monospace;
-    }
-
-    .header-actions {
+    .header-controls {
       display: flex;
       align-items: center;
       gap: 14px;
     }
 
-    .status-badge {
+    /* Master Output Toggle */
+    .master-toggle {
       display: flex;
       align-items: center;
-      gap: 7px;
-      font-size: 12px;
-      font-family: 'JetBrains Mono', monospace;
-      padding: 6px 12px;
-      background: rgba(12, 22, 29, 0.9);
+      gap: 10px;
+      background: var(--card-subtle);
       border: 1px solid var(--card-border);
-      border-radius: 20px;
+      border-radius: var(--radius-pill);
+      padding: 4px 14px 4px 6px;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     }
-
-    .status-dot {
+    .master-toggle:hover {
+      border-color: var(--card-border-hover);
+    }
+    .toggle-knob {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: #282828;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .toggle-knob::after {
+      content: '';
       width: 8px;
       height: 8px;
       border-radius: 50%;
-      background: var(--red);
-      box-shadow: 0 0 8px var(--red);
+      background: #555;
+      transition: all 0.2s ease;
     }
-    .status-dot.connected {
-      background: var(--green);
-      box-shadow: 0 0 10px var(--green);
+    .master-toggle.active {
+      background: var(--red-subtle);
+      border-color: var(--red);
+    }
+    .master-toggle.active .toggle-knob {
+      background: var(--red);
+      transform: translateX(4px);
+      box-shadow: 0 0 12px var(--red-glow);
+    }
+    .master-toggle.active .toggle-knob::after {
+      background: #fff;
+    }
+    .master-toggle-label {
+      font-family: var(--font-ndot);
+      font-size: 12px;
+      letter-spacing: 1px;
     }
 
-    .btn-ble {
-      background: linear-gradient(135deg, #2563eb, #6366f1);
-      color: #fff;
-      border: none;
-      padding: 8px 18px;
-      border-radius: 8px;
-      font-weight: 600;
-      font-size: 13px;
+    /* Connect BLE Pill Button */
+    .btn-ble-connect {
+      background: #ffffff;
+      color: #000000;
+      border: 1px solid #ffffff;
+      border-radius: var(--radius-pill);
+      padding: 8px 20px;
+      font-family: var(--font-ndot);
+      font-size: 12px;
+      letter-spacing: 1.5px;
       cursor: pointer;
       display: flex;
       align-items: center;
-      gap: 8px;
-      transition: all 0.2s ease;
-      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
+      gap: 10px;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 4px 18px rgba(255, 255, 255, 0.15);
     }
-    .btn-ble:hover {
+    .btn-ble-connect:hover {
+      background: #e6e6e6;
       transform: translateY(-1px);
-      box-shadow: 0 6px 20px rgba(37, 99, 235, 0.6);
+      box-shadow: 0 6px 24px rgba(255, 255, 255, 0.28);
+    }
+    .btn-ble-connect:active {
+      transform: scale(0.97);
+    }
+    .btn-ble-connect.connected {
+      background: var(--card-subtle);
+      color: var(--text);
+      border-color: var(--card-border);
+      box-shadow: none;
     }
 
+    .ble-status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--red);
+      transition: all 0.3s ease;
+    }
+    .ble-status-dot.connected {
+      background: #00ff66;
+      box-shadow: 0 0 10px rgba(0, 255, 102, 0.7);
+    }
+
+    /* Audio Feedback Toggle */
+    .btn-icon {
+      background: var(--card-subtle);
+      border: 1px solid var(--card-border);
+      color: var(--text-muted);
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-icon:hover {
+      color: var(--white);
+      border-color: var(--card-border-hover);
+    }
+    .btn-icon.active {
+      color: var(--white);
+      border-color: var(--card-border-active);
+      background: #1f1f1f;
+    }
+
+    /* Main Container Bento Grid */
     main {
       flex: 1;
-      padding: 20px 24px;
-      max-width: 1440px;
+      padding: 24px 28px;
+      max-width: 1540px;
       width: 100%;
       margin: 0 auto;
       display: flex;
@@ -136,744 +282,2134 @@
       gap: 20px;
     }
 
-    /* Waveform Preview Canvas */
-    .preview-card {
+    /* Bento Card Base */
+    .bento-card {
       background: var(--card-bg);
       border: 1px solid var(--card-border);
-      border-radius: 12px;
+      border-radius: var(--radius-lg);
+      padding: 22px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.25s ease;
+    }
+    .bento-card:hover {
+      border-color: var(--card-border-hover);
+    }
+
+    .bento-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .bento-title {
+      font-family: var(--font-ndot);
+      font-size: 13px;
+      letter-spacing: 1.5px;
+      color: var(--white);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .bento-tag {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+      background: var(--card-subtle);
+      padding: 3px 9px;
+      border-radius: var(--radius-pill);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    /* Top Row: Dual Visualizer (Oscilloscope CRT + Interactive Glyph Interface) */
+    .visualizer-row {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 20px;
+    }
+    @media (max-width: 1080px) {
+      .visualizer-row { grid-template-columns: 1fr; }
+    }
+
+    /* Digital Phosphor CRT Oscilloscope */
+    .scope-card {
+      min-height: 340px;
+      display: flex;
+      flex-direction: column;
+    }
+    .scope-container {
+      flex: 1;
+      position: relative;
+      background: #040404;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      min-height: 260px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #scopeCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .scope-hud {
+      position: absolute;
+      top: 12px;
+      left: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      pointer-events: none;
+    }
+    .hud-line {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.7);
+      background: rgba(0, 0, 0, 0.6);
+      padding: 2px 6px;
+      border-radius: 4px;
+      width: fit-content;
+    }
+    .hud-line.accent {
+      color: var(--red);
+      font-weight: 600;
+    }
+
+    .scope-controls-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 14px;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .scope-pill-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--card-subtle);
+      padding: 4px;
+      border-radius: var(--radius-pill);
+      border: 1px solid var(--card-border);
+    }
+    .scope-pill {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      padding: 5px 12px;
+      border-radius: var(--radius-pill);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .scope-pill:hover { color: var(--white); }
+    .scope-pill.active {
+      background: #ffffff;
+      color: #000000;
+      font-weight: 600;
+    }
+
+    /* Interactive Glyph Interface Bento Card */
+    .glyph-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 340px;
+    }
+    .glyph-display-frame {
+      width: 100%;
+      max-width: 220px;
+      aspect-ratio: 1 / 1.85;
+      background: #050505;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 36px;
+      position: relative;
       padding: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
+    }
+    .glyph-svg {
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+    }
+    .glyph-track {
+      stroke: var(--glyph-off);
+      stroke-width: 6;
+      stroke-linecap: round;
+      fill: none;
+    }
+    .glyph-glow-path {
+      stroke: var(--glyph-led);
+      stroke-width: 6;
+      stroke-linecap: round;
+      fill: none;
+      filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.9)) drop-shadow(0 0 16px rgba(255, 255, 255, 0.5));
+      opacity: 0.2;
+      transition: opacity 0.08s ease;
+    }
+    .glyph-red-dot {
+      fill: var(--red);
+      filter: drop-shadow(0 0 6px var(--red));
+    }
+    .glyph-mode-bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      width: 100%;
+      justify-content: center;
+      margin-top: 12px;
+    }
+
+    /* Waveform Selector Bento (Pill Buttons with Dot Matrix Icons) */
+    .waveforms-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 10px;
+    }
+    .wave-pill-btn {
+      background: var(--card-subtle);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-md);
+      padding: 14px 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
+      overflow: hidden;
+    }
+    .wave-pill-btn:hover {
+      border-color: var(--card-border-hover);
+      background: #181818;
+      transform: translateY(-2px);
+    }
+    .wave-pill-btn.active {
+      background: #ffffff;
+      border-color: #ffffff;
+      color: #000000;
+      box-shadow: 0 6px 20px rgba(255, 255, 255, 0.18);
+    }
+    .wave-pill-btn.active .wave-symbol {
+      color: #000000;
+    }
+    .wave-pill-btn.active .wave-name {
+      color: #000000;
+      font-weight: 700;
+    }
+    .wave-symbol {
+      font-size: 20px;
+      line-height: 1;
+      color: var(--text-muted);
+      transition: color 0.15s;
+    }
+    .wave-name {
+      font-family: var(--font-ndot);
+      font-size: 11px;
+      letter-spacing: 1px;
+      color: var(--text);
+    }
+    .wave-badge-hw {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      font-size: 8px;
+      font-family: var(--font-mono);
+      background: var(--red);
+      color: #fff;
+      padding: 1px 4px;
+      border-radius: 4px;
+      font-weight: 700;
+    }
+
+    /* Middle Row: Parameter Bento Controls */
+    .params-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+    }
+    @media (max-width: 1200px) {
+      .params-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 680px) {
+      .params-grid { grid-template-columns: 1fr; }
+    }
+
+    /* Rotary & Parameter Cards */
+    .param-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: 20px 16px;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-lg);
       position: relative;
     }
 
-    .preview-header {
+    .param-header {
+      width: 100%;
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 12px;
     }
-
-    .preview-title {
-      font-size: 13px;
-      font-weight: 700;
-      text-transform: uppercase;
+    .param-label {
+      font-family: var(--font-ndot);
+      font-size: 11px;
       letter-spacing: 1px;
+      color: var(--text-muted);
+    }
+    .param-unit {
+      font-family: var(--font-mono);
+      font-size: 11px;
       color: var(--text-dim);
     }
 
-    .preview-stats {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 11px;
-      display: flex;
-      gap: 16px;
-    }
-
-    canvas#previewCanvas {
+    .param-display-box {
+      background: #060606;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: var(--radius-md);
+      padding: 10px 14px;
       width: 100%;
-      height: 180px;
-      background: #060b0f;
-      border-radius: 8px;
-      display: block;
-      border: 1px solid #101c24;
+      margin-bottom: 16px;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+    .param-display-box:hover {
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+    .param-main-val {
+      font-family: var(--font-ndot);
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--white);
+      letter-spacing: 2px;
+      line-height: 1.1;
+    }
+    .param-sub-val {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
     }
 
-    /* Dual Channel Grid */
-    .channels-grid {
+    /* Range Sliders with Nothing Style Ticks */
+    .nothing-slider {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      background: #1f1f1f;
+      outline: none;
+      margin: 14px 0 8px 0;
+      cursor: pointer;
+    }
+    .nothing-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #ffffff;
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+      transition: transform 0.1s ease;
+    }
+    .nothing-slider::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+    .nothing-slider.slider-red::-webkit-slider-thumb {
+      background: var(--red);
+      box-shadow: 0 0 12px var(--red-glow);
+    }
+
+    .decade-btn-group {
+      display: flex;
+      gap: 4px;
+      width: 100%;
+      margin-top: 10px;
+    }
+    .decade-btn {
+      flex: 1;
+      background: var(--card-subtle);
+      border: 1px solid var(--card-border);
+      border-radius: 6px;
+      padding: 6px 0;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .decade-btn:hover { color: #fff; border-color: #fff; }
+    .decade-btn.active {
+      background: #ffffff;
+      color: #000000;
+      font-weight: 700;
+      border-color: #ffffff;
+    }
+
+    /* DAC Buffer Mode Card */
+    .buffer-mode-card {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .buffer-switch-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      width: 100%;
+      margin-top: 10px;
+    }
+    .buffer-option-btn {
+      background: var(--card-subtle);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+      text-align: left;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .buffer-option-btn:hover {
+      border-color: var(--card-border-hover);
+    }
+    .buffer-option-btn.active {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: var(--white);
+    }
+    .buffer-opt-title {
+      font-family: var(--font-ndot);
+      font-size: 12px;
+      color: var(--white);
+      letter-spacing: 1px;
+    }
+    .buffer-opt-desc {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-top: 3px;
+    }
+    .buffer-indicator-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #252525;
+    }
+    .buffer-option-btn.active .buffer-indicator-dot {
+      background: var(--red);
+      box-shadow: 0 0 8px var(--red);
+    }
+
+    /* Lower Grid: Equation Lab + AWG Touch Pad + Telemetry & Presets */
+    .lower-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 20px;
+    }
+    @media (max-width: 980px) {
+      .lower-grid { grid-template-columns: 1fr; }
+    }
+
+    /* Math Equation Studio Bento Card */
+    .equation-card {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .equation-input-wrap {
+      display: flex;
+      gap: 10px;
+    }
+    .equation-input {
+      flex: 1;
+      background: #050505;
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-md);
+      padding: 12px 16px;
+      font-family: var(--font-mono);
+      font-size: 14px;
+      color: #ffffff;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .equation-input:focus {
+      border-color: var(--white);
+      box-shadow: 0 0 12px rgba(255, 255, 255, 0.15);
+    }
+    .btn-compile-eqn {
+      background: var(--white);
+      color: #000;
+      border: none;
+      border-radius: var(--radius-md);
+      padding: 0 18px;
+      font-family: var(--font-ndot);
+      font-size: 11px;
+      letter-spacing: 1.5px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-compile-eqn:hover {
+      background: #e0e0e0;
+      transform: scale(1.02);
+    }
+    .equation-presets-chips {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .eqn-chip {
+      background: var(--card-subtle);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-pill);
+      padding: 5px 12px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .eqn-chip:hover {
+      color: #fff;
+      border-color: #fff;
+      background: #1a1a1a;
+    }
+    .eqn-preview-canvas {
+      width: 100%;
+      height: 90px;
+      background: #050505;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: var(--radius-sm);
+    }
+
+    /* AWG Touch Sculptor Bento Card */
+    .awg-card {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .awg-canvas-container {
+      position: relative;
+      background: #040404;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: var(--radius-md);
+      height: 120px;
+      cursor: crosshair;
+    }
+    #awgCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .awg-actions-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .btn-awg-action {
+      background: var(--card-subtle);
+      border: 1px solid var(--card-border);
+      color: var(--text);
+      font-family: var(--font-ndot);
+      font-size: 10px;
+      padding: 6px 14px;
+      border-radius: var(--radius-pill);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-awg-action:hover {
+      border-color: #fff;
+      color: #fff;
+    }
+    .btn-awg-action.primary {
+      background: #fff;
+      color: #000;
+      font-weight: 700;
+      border-color: #fff;
+    }
+
+    /* Telemetry & Presets Bottom Bar */
+    .footer-bento {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
       gap: 20px;
     }
     @media (max-width: 900px) {
-      .channels-grid { grid-template-columns: 1fr; }
+      .footer-bento { grid-template-columns: 1fr; }
     }
 
-    .ch-card {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 12px;
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 18px;
-      position: relative;
-      overflow: hidden;
-    }
-    .ch-card.ch1 { border-top: 3px solid var(--ch1); }
-    .ch-card.ch2 { border-top: 3px solid var(--ch2); }
-
-    .ch-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .ch-title {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 17px;
-      font-weight: 700;
-    }
-    .ch1 .ch-title { color: var(--ch1); }
-    .ch2 .ch-title { color: var(--ch2); }
-
-    .switch {
-      position: relative;
-      display: inline-block;
-      width: 44px;
-      height: 24px;
-    }
-    .switch input { opacity: 0; width: 0; height: 0; }
-    .slider-toggle {
-      position: absolute;
-      cursor: pointer;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background-color: #1e3340;
-      transition: .3s;
-      border-radius: 24px;
-    }
-    .slider-toggle:before {
-      position: absolute;
-      content: "";
-      height: 18px;
-      width: 18px;
-      left: 3px;
-      bottom: 3px;
-      background-color: white;
-      transition: .3s;
-      border-radius: 50%;
-    }
-    .ch1 input:checked + .slider-toggle { background-color: var(--ch1); }
-    .ch2 input:checked + .slider-toggle { background-color: var(--ch2); }
-    input:checked + .slider-toggle:before { transform: translateX(20px); }
-
-    /* Waveform selector */
-    .wave-grid {
+    .telemetry-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 8px;
+      gap: 10px;
     }
-    .wave-btn {
-      background: #09131a;
-      border: 1px solid var(--card-border);
-      color: var(--text-dim);
-      padding: 10px 4px;
-      border-radius: 8px;
-      font-size: 11.5px;
-      font-weight: 600;
-      cursor: pointer;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 4px;
-      transition: all 0.2s;
+    @media (max-width: 600px) {
+      .telemetry-grid { grid-template-columns: repeat(2, 1fr); }
     }
-    .wave-btn:hover { border-color: #27475c; color: #fff; }
-    .ch1 .wave-btn.active {
-      background: rgba(56, 189, 248, 0.12);
-      border-color: var(--ch1);
-      color: var(--ch1);
-      box-shadow: 0 0 12px var(--ch1-glow);
+    .telemetry-box {
+      background: #070707;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
     }
-    .ch2 .wave-btn.active {
-      background: rgba(245, 158, 11, 0.12);
-      border-color: var(--ch2);
-      color: var(--ch2);
-      box-shadow: 0 0 12px var(--ch2-glow);
-    }
-
-    /* Controls block */
-    .control-row {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-    .control-lbl {
-      display: flex;
-      justify-content: space-between;
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--text-dim);
-    }
-    .control-val {
-      font-family: 'JetBrains Mono', monospace;
-      color: #fff;
-      font-size: 13px;
-    }
-
-    .presets-row {
-      display: flex;
-      gap: 6px;
-      margin-top: 4px;
-    }
-    .preset-btn {
-      background: #0b1820;
-      border: 1px solid var(--card-border);
-      color: var(--text);
+    .telemetry-key {
+      font-family: var(--font-mono);
       font-size: 10px;
-      font-family: 'JetBrains Mono', monospace;
-      padding: 3px 8px;
-      border-radius: 4px;
-      cursor: pointer;
-      transition: all 0.2s;
+      color: var(--text-dim);
+      text-transform: uppercase;
     }
-    .preset-btn:hover { background: #162c3b; color: #fff; }
+    .telemetry-val {
+      font-family: var(--font-ndot);
+      font-size: 15px;
+      color: var(--white);
+      margin-top: 4px;
+      letter-spacing: 1px;
+    }
 
-    input[type=range] {
-      -webkit-appearance: none;
-      width: 100%;
-      background: transparent;
+    .presets-card {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
     }
-    input[type=range]:focus { outline: none; }
-    input[type=range]::-webkit-slider-runnable-track {
-      width: 100%;
-      height: 6px;
+    .presets-list {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .preset-chip {
+      background: var(--card-subtle);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-pill);
+      padding: 6px 14px;
+      font-family: var(--font-ndot);
+      font-size: 11px;
+      color: var(--text);
       cursor: pointer;
-      background: #142834;
-      border-radius: 3px;
+      transition: all 0.15s;
     }
-    input[type=range]::-webkit-slider-thumb {
-      height: 18px;
-      width: 18px;
-      border-radius: 50%;
-      background: #fff;
-      cursor: pointer;
-      -webkit-appearance: none;
-      margin-top: -6px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+    .preset-chip:hover {
+      background: #ffffff;
+      color: #000000;
+      border-color: #ffffff;
     }
-    .ch1 input[type=range]::-webkit-slider-thumb { background: var(--ch1); }
-    .ch2 input[type=range]::-webkit-slider-thumb { background: var(--ch2); }
 
-    /* AWG Modal */
-    .modal {
-      display: none;
+    /* Modal Numeric Input */
+    .modal-backdrop {
       position: fixed;
-      top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.8);
-      z-index: 200;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(12px);
+      display: none;
       align-items: center;
       justify-content: center;
+      z-index: 2000;
     }
-    .modal.active { display: flex; }
-    .modal-content {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 14px;
+    .modal-card {
+      background: #0e0e0e;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: var(--radius-xl);
+      padding: 28px;
       width: 90%;
-      max-width: 650px;
-      padding: 24px;
+      max-width: 360px;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.9);
+    }
+    .modal-title {
+      font-family: var(--font-ndot);
+      font-size: 14px;
+      color: var(--white);
+      letter-spacing: 2px;
+      margin-bottom: 16px;
+    }
+    .modal-input {
+      width: 100%;
+      background: #000;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: var(--radius-md);
+      padding: 14px;
+      font-family: var(--font-ndot);
+      font-size: 24px;
+      color: #fff;
+      text-align: center;
+      outline: none;
+      margin-bottom: 20px;
+    }
+    .modal-btn-row {
+      display: flex;
+      gap: 10px;
+    }
+    .modal-btn {
+      flex: 1;
+      padding: 12px;
+      border-radius: var(--radius-pill);
+      font-family: var(--font-ndot);
+      font-size: 11px;
+      letter-spacing: 1px;
+      cursor: pointer;
+      border: none;
+    }
+    .modal-btn.confirm {
+      background: #fff;
+      color: #000;
+      font-weight: 700;
+    }
+    .modal-btn.cancel {
+      background: #1f1f1f;
+      color: #888;
+    }
+
+    /* Toast Notification */
+    .toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 3000;
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 8px;
+      pointer-events: none;
     }
-    canvas#awgCanvas {
-      width: 100%;
-      height: 200px;
-      background: #060b0f;
-      border: 1px solid #101c24;
-      border-radius: 8px;
-      cursor: crosshair;
+    .toast {
+      background: rgba(18, 18, 18, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(12px);
+      padding: 10px 18px;
+      border-radius: var(--radius-pill);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: #fff;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      animation: toast-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
-    .btn-action {
-      background: var(--ch1);
-      color: #000;
-      border: none;
-      padding: 10px 16px;
-      border-radius: 6px;
-      font-weight: 700;
-      cursor: pointer;
+    @keyframes toast-in {
+      from { transform: translateY(12px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
     }
   </style>
 </head>
 <body>
 
+  <!-- Top Header Navigation Bar -->
   <header>
-    <div class="brand">
-      <div class="logo-badge">1 MSPS</div>
-      <div>
-        <h1>FUNCTION GENERATOR 10000</h1>
-        <span>STM32 MB1814 (12-bit Dual DAC) + ESP32 BLE Wireless</span>
+    <div class="brand-group">
+      <div class="brand-mark">
+        <span class="brand-title">FUNC_GEN<span style="font-size: 14px;">(1)</span></span>
+        <span class="brand-red-dot" title="Active Silicon Synthesizer"></span>
       </div>
+      <div class="brand-sub ndot">STM32H503RB // 250_MHZ CORTEX-M33</div>
     </div>
-    <div class="header-actions">
-      <div class="status-badge">
-        <div class="status-dot" id="bleDot"></div>
-        <span id="bleStatus">BLE Disconnected</span>
-        <span id="rttStat" style="color:var(--ch1); margin-left:6px; display:none;">-- ms</span>
+
+    <div class="header-controls">
+      <!-- Master Output On/Off Toggle -->
+      <div class="master-toggle active" id="masterToggle" title="Toggle DAC Output State">
+        <div class="toggle-knob"></div>
+        <span class="master-toggle-label" id="masterToggleText">ARMED</span>
       </div>
-      <button class="btn-ble" id="btnConnect" onclick="toggleBLE()">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m7 7 10 10-5 5V2l5 5L7 17"/></svg>
-        <span>Connect BLE</span>
+
+      <!-- Web Bluetooth Connect Button -->
+      <button class="btn-ble-connect" id="btnBleConnect">
+        <span class="ble-status-dot" id="bleStatusDot"></span>
+        <span id="btnBleText">PAIR BLE</span>
+      </button>
+
+      <!-- Tactile Sound Feedback Toggle -->
+      <button class="btn-icon active" id="btnAudioFeedback" title="Toggle Tactile Click Sounds">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+          <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+        </svg>
       </button>
     </div>
   </header>
 
+  <!-- Main Bento Grid Container -->
   <main>
-    <!-- Waveform Live Visualizer -->
-    <div class="preview-card">
-      <div class="preview-header">
-        <span class="preview-title">Real-Time Waveform Output (1 MSPS Hardware Synthesis)</span>
-        <div class="preview-stats">
-          <span style="color:var(--ch1)">CH1: <strong id="lbl-ch1-f">1000 Hz</strong> (<span id="lbl-ch1-w">SINE</span>)</span>
-          <span style="color:var(--ch2)">CH2: <strong id="lbl-ch2-f">1000 Hz</strong> (<span id="lbl-ch2-w">SINE</span>)</span>
-          <span style="color:var(--text-dim)">Sampling: <strong>1.00 MSPS (1µs)</strong></span>
-        </div>
-      </div>
-      <canvas id="previewCanvas"></canvas>
-    </div>
 
-    <!-- Dual Channels Configuration Grid -->
-    <div class="channels-grid">
-
-      <!-- CHANNEL 1 (PA4 DAC1_CH1) -->
-      <div class="ch-card ch1">
-        <div class="ch-header">
-          <div class="ch-title">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 12s1.5-4 4-4 4 4 4 4"/></svg>
-            <span>CHANNEL 1 (PA4 DAC)</span>
+    <!-- Row 1: Dual Visualizer (Digital Phosphor Oscilloscope + Nothing Glyph Interface) -->
+    <section class="visualizer-row">
+      <!-- Digital Phosphor CRT Oscilloscope -->
+      <div class="bento-card scope-card">
+        <div class="bento-header">
+          <div class="bento-title">
+            <span class="brand-red-dot" style="width:6px; height:6px;"></span>
+            DIGITAL_OSCILLOSCOPE // PHOSPHOR_TRACE
           </div>
-          <label class="switch">
-            <input type="checkbox" id="ch1-en" checked onchange="updateCh(1)">
-            <span class="slider-toggle"></span>
-          </label>
+          <div class="bento-tag tech-mono" id="scopeStatusTag">2.049 MSPS // 12-BIT</div>
         </div>
 
-        <div class="wave-grid">
-          <div class="wave-btn active" onclick="setWave(1,'s')">SINE</div>
-          <div class="wave-btn" onclick="setWave(1,'q')">SQUARE</div>
-          <div class="wave-btn" onclick="setWave(1,'t')">TRIANGLE</div>
-          <div class="wave-btn" onclick="setWave(1,'a')">SAW</div>
-          <div class="wave-btn" onclick="setWave(1,'p')">PWM</div>
-          <div class="wave-btn" onclick="setWave(1,'n')">NOISE</div>
-          <div class="wave-btn" onclick="openAwgModal(1)">AWG ✎</div>
-          <div class="wave-btn" onclick="setSweep(1)">SWEEP</div>
-        </div>
-
-        <div class="control-row">
-          <div class="control-lbl">
-            <span>FREQUENCY</span>
-            <span class="control-val" id="val-ch1-freq">1,000 Hz</span>
-          </div>
-          <input type="range" id="rng-ch1-freq" min="1" max="100000" step="1" value="1000" oninput="onFreqSlide(1, this.value)">
-          <div class="presets-row">
-            <button class="preset-btn" onclick="setFreq(1, 100)">100Hz</button>
-            <button class="preset-btn" onclick="setFreq(1, 1000)">1kHz</button>
-            <button class="preset-btn" onclick="setFreq(1, 10000)">10kHz</button>
-            <button class="preset-btn" onclick="setFreq(1, 50000)">50kHz</button>
-            <button class="preset-btn" onclick="setFreq(1, 100000)">100kHz</button>
+        <div class="scope-container" id="scopeContainer">
+          <canvas id="scopeCanvas"></canvas>
+          <div class="scope-hud">
+            <span class="hud-line accent" id="hudVpp">VPP: 3.30 V</span>
+            <span class="hud-line" id="hudFreq">F: 1.000 kHz</span>
+            <span class="hud-line" id="hudVrms">VRMS: 1.16 V</span>
+            <span class="hud-line tech-mono" id="hudBuffer">DAC: MODE 0 [BUF_ON]</span>
           </div>
         </div>
 
-        <div class="control-row">
-          <div class="control-lbl">
-            <span>AMPLITUDE (Vpp)</span>
-            <span class="control-val" id="val-ch1-amp">100% (3.3V)</span>
+        <div class="scope-controls-bar">
+          <div class="scope-pill-group">
+            <button class="scope-pill active" id="btnViewTime">TIME DOMAIN</button>
+            <button class="scope-pill" id="btnViewFreq">FFT SPECTRUM</button>
           </div>
-          <input type="range" id="rng-ch1-amp" min="0" max="100" value="100" oninput="updateCh(1)">
-        </div>
 
-        <div class="control-row">
-          <div class="control-lbl">
-            <span>DC OFFSET</span>
-            <span class="control-val" id="val-ch1-off">0 mV</span>
+          <div class="scope-pill-group">
+            <span style="font-family: var(--font-mono); font-size: 10px; color: var(--text-dim); padding-left: 6px;">T_BASE:</span>
+            <button class="scope-pill" data-tbase="200">200µs</button>
+            <button class="scope-pill active" data-tbase="1000">1ms</button>
+            <button class="scope-pill" data-tbase="5000">5ms</button>
           </div>
-          <input type="range" id="rng-ch1-off" min="-128" max="127" value="0" oninput="updateCh(1)">
-        </div>
 
-        <div class="control-row" id="row-ch1-duty">
-          <div class="control-lbl">
-            <span>DUTY CYCLE / PULSE WIDTH</span>
-            <span class="control-val" id="val-ch1-duty">50%</span>
+          <div class="scope-pill-group">
+            <button class="scope-pill active" id="btnPhosphorGlow">GLOW: ON</button>
           </div>
-          <input type="range" id="rng-ch1-duty" min="1" max="99" value="50" oninput="updateCh(1)">
         </div>
       </div>
 
-      <!-- CHANNEL 2 (PA5 DAC1_CH2) -->
-      <div class="ch-card ch2">
-        <div class="ch-header">
-          <div class="ch-title">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 12s1.5-4 4-4 4 4 4 4"/></svg>
-            <span>CHANNEL 2 (PA5 DAC)</span>
-          </div>
-          <label class="switch">
-            <input type="checkbox" id="ch2-en" checked onchange="updateCh(2)">
-            <span class="slider-toggle"></span>
-          </label>
+      <!-- Nothing Phone Glyph Interface Visualizer -->
+      <div class="bento-card glyph-card">
+        <div class="bento-header" style="width: 100%;">
+          <div class="bento-title">GLYPH_INTERFACE</div>
+          <div class="bento-tag ndot" id="glyphModeLabel">PULSE</div>
         </div>
 
-        <div class="wave-grid">
-          <div class="wave-btn active" onclick="setWave(2,'s')">SINE</div>
-          <div class="wave-btn" onclick="setWave(2,'q')">SQUARE</div>
-          <div class="wave-btn" onclick="setWave(2,'t')">TRIANGLE</div>
-          <div class="wave-btn" onclick="setWave(2,'a')">SAW</div>
-          <div class="wave-btn" onclick="setWave(2,'p')">PWM</div>
-          <div class="wave-btn" onclick="setWave(2,'n')">NOISE</div>
-          <div class="wave-btn" onclick="openAwgModal(2)">AWG ✎</div>
-          <div class="wave-btn" onclick="setSweep(2)">SWEEP</div>
+        <div class="glyph-display-frame">
+          <svg class="glyph-svg" viewBox="0 0 180 330">
+            <!-- Background Tracks (Off State) -->
+            <!-- Top Camera Ring -->
+            <path class="glyph-track" d="M 65 30 A 30 30 0 0 1 125 30 A 30 30 0 0 1 65 30 Z" />
+            <path class="glyph-track" d="M 65 95 A 30 30 0 0 1 125 95 A 30 30 0 0 1 65 95 Z" />
+            <!-- Top Right Slash -->
+            <path class="glyph-track" d="M 132 40 L 158 66" />
+            <!-- Center C Loop -->
+            <path class="glyph-track" d="M 125 155 A 42 42 0 1 0 125 215" />
+            <!-- Center Dot -->
+            <circle class="glyph-track" cx="95" cy="185" r="8" />
+            <!-- Bottom Line & Exclamation Dot -->
+            <path class="glyph-track" d="M 95 242 L 95 285" />
+            <circle class="glyph-track" cx="95" cy="305" r="4" />
+            <circle class="glyph-track glyph-red-dot" cx="152" cy="185" r="3.5" />
+
+            <!-- Active Glowing LED Segments -->
+            <path id="glyphCam1" class="glyph-glow-path" d="M 65 30 A 30 30 0 0 1 125 30 A 30 30 0 0 1 65 30 Z" />
+            <path id="glyphCam2" class="glyph-glow-path" d="M 65 95 A 30 30 0 0 1 125 95 A 30 30 0 0 1 65 95 Z" />
+            <path id="glyphSlash" class="glyph-glow-path" d="M 132 40 L 158 66" />
+            <path id="glyphCenterC" class="glyph-glow-path" d="M 125 155 A 42 42 0 1 0 125 215" />
+            <circle id="glyphCenterDot" class="glyph-glow-path" cx="95" cy="185" r="8" />
+            <path id="glyphBottomBar" class="glyph-glow-path" d="M 95 242 L 95 285" />
+            <circle id="glyphBottomDot" class="glyph-glow-path" cx="95" cy="305" r="4" />
+          </svg>
         </div>
 
-        <div class="control-row">
-          <div class="control-lbl">
-            <span>FREQUENCY</span>
-            <span class="control-val" id="val-ch2-freq">1,000 Hz</span>
-          </div>
-          <input type="range" id="rng-ch2-freq" min="1" max="100000" step="1" value="1000" oninput="onFreqSlide(2, this.value)">
-          <div class="presets-row">
-            <button class="preset-btn" onclick="setFreq(2, 100)">100Hz</button>
-            <button class="preset-btn" onclick="setFreq(2, 1000)">1kHz</button>
-            <button class="preset-btn" onclick="setFreq(2, 10000)">10kHz</button>
-            <button class="preset-btn" onclick="setFreq(2, 50000)">50kHz</button>
-            <button class="preset-btn" onclick="setFreq(2, 100000)">100kHz</button>
+        <div class="glyph-mode-bar">
+          <div class="scope-pill-group">
+            <button class="scope-pill active" id="btnGlyphAudioSync">AUDIO_SYNC</button>
+            <button class="scope-pill" id="btnGlyphBreathing">BREATHE</button>
+            <button class="scope-pill" id="btnGlyphTorch">TORCH</button>
           </div>
         </div>
+      </div>
+    </section>
 
-        <div class="control-row">
-          <div class="control-lbl">
-            <span>AMPLITUDE (Vpp)</span>
-            <span class="control-val" id="val-ch2-amp">100% (3.3V)</span>
-          </div>
-          <input type="range" id="rng-ch2-amp" min="0" max="100" value="100" oninput="updateCh(2)">
+    <!-- Row 2: Waveform Selector Bento (Nothing Style Segmented Pills) -->
+    <section class="bento-card">
+      <div class="bento-header">
+        <div class="bento-title">WAVEFORM_SYNTHESIS_ENGINE</div>
+        <div class="bento-tag tech-mono">12-BIT HARDWARE DAC1_OUT1 (PA4)</div>
+      </div>
+
+      <div class="waveforms-grid">
+        <div class="wave-pill-btn active" data-wave="s">
+          <span class="wave-symbol">∿</span>
+          <span class="wave-name">SINE</span>
+        </div>
+        <div class="wave-pill-btn" data-wave="q">
+          <span class="wave-symbol">⊓</span>
+          <span class="wave-name">SQUARE</span>
+        </div>
+        <div class="wave-pill-btn" data-wave="t">
+          <span class="wave-symbol">∧</span>
+          <span class="wave-name">TRIANGLE</span>
+        </div>
+        <div class="wave-pill-btn" data-wave="a">
+          <span class="wave-symbol">◿</span>
+          <span class="wave-name">SAWTOOTH</span>
+        </div>
+        <div class="wave-pill-btn" data-wave="p">
+          <span class="wave-symbol">⊓%</span>
+          <span class="wave-name">PWM_PULSE</span>
+        </div>
+        <div class="wave-pill-btn" data-wave="n">
+          <span class="wave-symbol">⁙</span>
+          <span class="wave-name">PRNG_NOISE</span>
+        </div>
+        <div class="wave-pill-btn" data-wave="h">
+          <span class="wave-symbol">⚡</span>
+          <span class="wave-name">HW_LFSR</span>
+          <span class="wave-badge-hw">SILICON</span>
+        </div>
+        <div class="wave-pill-btn" data-wave="c">
+          <span class="wave-symbol">✏️</span>
+          <span class="wave-name">CUSTOM_AWG</span>
+        </div>
+        <div class="wave-pill-btn" data-wave="e">
+          <span class="wave-symbol">ƒ(t)</span>
+          <span class="wave-name">EQUATION</span>
+          <span class="wave-badge-hw" style="background:#fff; color:#000;">VM</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Row 3: Parameter Dials & Sliders (Frequency, Amplitude, Offset, DAC Buffer) -->
+    <section class="params-grid">
+      <!-- Frequency Bento Module -->
+      <div class="param-card">
+        <div class="param-header">
+          <span class="param-label">FREQUENCY</span>
+          <span class="param-unit tech-mono">[1 Hz - 128 kHz]</span>
         </div>
 
-        <div class="control-row">
-          <div class="control-lbl">
-            <span>PHASE OFFSET (CH1 ↔ CH2)</span>
-            <span class="control-val" id="val-phase">0°</span>
-          </div>
-          <input type="range" id="rng-phase" min="0" max="360" value="0" oninput="onPhaseSlide(this.value)">
+        <div class="param-display-box" id="boxFreq" title="Click to enter exact value directly">
+          <div class="param-main-val" id="dispFreqVal">1,000</div>
+          <div class="param-sub-val" id="dispFreqSub">1.0000 kHz // ACT: 1000.58 Hz</div>
         </div>
 
-        <div class="control-row" id="row-ch2-duty">
-          <div class="control-lbl">
-            <span>DUTY CYCLE / PULSE WIDTH</span>
-            <span class="control-val" id="val-ch2-duty">50%</span>
-          </div>
-          <input type="range" id="rng-ch2-duty" min="1" max="99" value="50" oninput="updateCh(2)">
+        <input type="range" class="nothing-slider slider-red" id="sliderFreq" min="1" max="1000" value="1000" step="1">
+
+        <div class="decade-btn-group">
+          <button class="decade-btn" data-mult="1">×1</button>
+          <button class="decade-btn" data-mult="10">×10</button>
+          <button class="decade-btn" data-mult="100">×100</button>
+          <button class="decade-btn active" data-mult="1000">×1k</button>
+          <button class="decade-btn" data-mult="10000">×10k</button>
         </div>
       </div>
 
-    </div>
+      <!-- Amplitude Bento Module -->
+      <div class="param-card">
+        <div class="param-header">
+          <span class="param-label">AMPLITUDE</span>
+          <span class="param-unit tech-mono">[0 - 100%]</span>
+        </div>
+
+        <div class="param-display-box" id="boxAmp">
+          <div class="param-main-val" id="dispAmpVal">100%</div>
+          <div class="param-sub-val" id="dispAmpSub">3.30 Vpp // 1.16 Vrms</div>
+        </div>
+
+        <input type="range" class="nothing-slider" id="sliderAmp" min="0" max="100" value="100" step="1">
+
+        <div class="decade-btn-group">
+          <button class="decade-btn" data-amp="25">25%</button>
+          <button class="decade-btn" data-amp="50">50%</button>
+          <button class="decade-btn" data-amp="75">75%</button>
+          <button class="decade-btn active" data-amp="100">100%</button>
+        </div>
+      </div>
+
+      <!-- DC Offset / PWM Duty Module -->
+      <div class="param-card">
+        <div class="param-header">
+          <span class="param-label" id="labelOffsetOrDuty">DC_OFFSET</span>
+          <span class="param-unit tech-mono" id="unitOffsetOrDuty">[-1.65V .. +1.65V]</span>
+        </div>
+
+        <div class="param-display-box" id="boxOffset">
+          <div class="param-main-val" id="dispOffsetVal">0.00 V</div>
+          <div class="param-sub-val" id="dispOffsetSub">BIAS: +1.65 V REF (MID)</div>
+        </div>
+
+        <input type="range" class="nothing-slider" id="sliderOffset" min="-128" max="127" value="0" step="1">
+
+        <div class="decade-btn-group" id="groupOffsetQuick">
+          <button class="decade-btn" data-off="-64">-0.8V</button>
+          <button class="decade-btn active" data-off="0">0.0V</button>
+          <button class="decade-btn" data-off="64">+0.8V</button>
+        </div>
+      </div>
+
+      <!-- DAC Output Buffer Mode Switch Bento Module -->
+      <div class="param-card buffer-mode-card">
+        <div class="param-header">
+          <span class="param-label">DAC_BUFFER_ARCHITECTURE</span>
+          <span class="param-unit tech-mono">DAC_MCR</span>
+        </div>
+
+        <div class="buffer-switch-group">
+          <div class="buffer-option-btn active" id="btnBufOn">
+            <div>
+              <div class="buffer-opt-title">MODE 0 // BUFFER_ON</div>
+              <div class="buffer-opt-desc">Internal Follower | ~0.2V-3.1V | Drive 5kΩ</div>
+            </div>
+            <div class="buffer-indicator-dot"></div>
+          </div>
+
+          <div class="buffer-option-btn" id="btnBufOff">
+            <div>
+              <div class="buffer-opt-title">MODE 2 // BUFFER_OFF</div>
+              <div class="buffer-opt-desc">Direct R-2R | 0.0V-3.3V Rail-to-Rail | Rout 15kΩ</div>
+            </div>
+            <div class="buffer-indicator-dot"></div>
+          </div>
+        </div>
+
+        <div style="font-family: var(--font-mono); font-size: 10px; color: var(--text-dim); margin-top: 10px; text-align: left;">
+          *Buffer OFF delivers true 0-3.3V full-scale swing and &lt;800ns settling for external op-amps.
+        </div>
+      </div>
+    </section>
+
+    <!-- Row 4: Math Equation Studio + Custom AWG Touch Pad -->
+    <section class="lower-grid">
+      <!-- Equation Studio Bento -->
+      <div class="bento-card equation-card">
+        <div class="bento-header">
+          <div class="bento-title">MATHEMATICAL_EQUATION_STUDIO</div>
+          <div class="bento-tag tech-mono">2048-POINT BYTECODE VM</div>
+        </div>
+
+        <div class="equation-input-wrap">
+          <input type="text" class="equation-input" id="inputEquation" value="sin(t) + 0.5*sin(3*t)" placeholder="e.g. sin(t) + 0.3*sin(5*t)">
+          <button class="btn-compile-eqn" id="btnCompileEqn">SEND TO STM32</button>
+        </div>
+
+        <div class="equation-presets-chips">
+          <span class="eqn-chip" data-formula="sin(t) + 0.5*sin(3*t)">Square Approx</span>
+          <span class="eqn-chip" data-formula="sinc(t)">Sinc Pulse</span>
+          <span class="eqn-chip" data-formula="exp(-t/2) * sin(6*t)">Damped Osc</span>
+          <span class="eqn-chip" data-formula="abs(sin(t))">Rectified Sine</span>
+          <span class="eqn-chip" data-formula="sin(t^1.4)">Chirp Sweep</span>
+          <span class="eqn-chip" data-formula="sin(t) * (1 + 0.5*sin(4*t))">AM Modulation</span>
+        </div>
+
+        <canvas class="eqn-preview-canvas" id="eqnPreviewCanvas"></canvas>
+      </div>
+
+      <!-- AWG Touch Waveform Sculptor Bento -->
+      <div class="bento-card awg-card">
+        <div class="bento-header">
+          <div class="bento-title">AWG_WAVEFORM_SCULPTOR</div>
+          <div class="bento-tag tech-mono">64-POINT INTERPOLATOR</div>
+        </div>
+
+        <div class="awg-canvas-container">
+          <canvas id="awgCanvas"></canvas>
+        </div>
+
+        <div class="awg-actions-bar">
+          <button class="btn-awg-action" id="btnAwgClear">CLEAR (MID)</button>
+          <button class="btn-awg-action" id="btnAwgSmooth">SMOOTH</button>
+          <button class="btn-awg-action primary" id="btnAwgSend">SEND CHUNKS (0x10..13)</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Row 5: Hardware Telemetry & Commercial Presets Bank -->
+    <section class="footer-bento">
+      <div class="bento-card">
+        <div class="bento-header">
+          <div class="bento-title">HARDWARE_DIAGNOSTICS_TELEMETRY</div>
+          <div class="bento-tag tech-mono" id="telLinkState">STM32 ONLINE // RTT: 0.8ms</div>
+        </div>
+
+        <div class="telemetry-grid">
+          <div class="telemetry-box">
+            <div class="telemetry-key">SAMPLING_RATE</div>
+            <div class="telemetry-val" id="telFs">2.049 MSPS</div>
+          </div>
+          <div class="telemetry-box">
+            <div class="telemetry-key">TIM6_ARR // PSC</div>
+            <div class="telemetry-val" id="telArrPsc">121 // 0</div>
+          </div>
+          <div class="telemetry-box">
+            <div class="telemetry-key">FPU_COMPUTE</div>
+            <div class="telemetry-val" id="telCompute">1.82 ms</div>
+          </div>
+          <div class="telemetry-box">
+            <div class="telemetry-key">DISCRETE_ERROR</div>
+            <div class="telemetry-val" id="telError">+0.058 %</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Presets Bank Bento -->
+      <div class="bento-card presets-card">
+        <div class="bento-header">
+          <div class="bento-title">PRESETS_BANK</div>
+          <button class="btn-icon" id="btnSavePreset" style="width:28px; height:28px;" title="Save current settings as custom preset">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+          </button>
+        </div>
+
+        <div class="presets-list" id="presetsList">
+          <span class="preset-chip" data-preset="audio">01 // AUDIO_1K</span>
+          <span class="preset-chip" data-preset="pwm">02 // PWM_25K</span>
+          <span class="preset-chip" data-preset="sinc">03 // SINC_PULSE</span>
+          <span class="preset-chip" data-preset="noise">04 // HW_NOISE</span>
+        </div>
+      </div>
+    </section>
+
   </main>
 
-  <!-- AWG Drawer Modal -->
-  <div class="modal" id="awgModal">
-    <div class="modal-content">
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <h3 id="awgModalTitle">Arbitrary Waveform Painter</h3>
-        <button class="preset-btn" onclick="closeAwgModal()">✕ Close</button>
-      </div>
-      <p style="font-size:12px; color:var(--text-dim)">Draw your custom 64-point wave shape with your mouse or finger, or choose a math preset:</p>
-      <div style="display:flex; gap:8px;">
-        <button class="preset-btn" onclick="presetAwg('sinc')">Sinc(x)</button>
-        <button class="preset-btn" onclick="presetAwg('ecg')">ECG/Cardiac</button>
-        <button class="preset-btn" onclick="presetAwg('exp')">Exp Decay</button>
-        <button class="preset-btn" onclick="presetAwg('stair')">Staircase</button>
-        <button class="preset-btn" onclick="presetAwg('clear')">Clear (GND)</button>
-      </div>
-      <canvas id="awgCanvas"></canvas>
-      <div style="display:flex; justify-content:flex-end; gap:10px;">
-        <button class="btn-action" onclick="sendAwgToHardware()">Upload AWG to Hardware</button>
+  <!-- Numeric Input Modal -->
+  <div class="modal-backdrop" id="modalBackdrop">
+    <div class="modal-card">
+      <div class="modal-title" id="modalTitle">ENTER FREQUENCY (HZ)</div>
+      <input type="number" class="modal-input" id="modalInput" autofocus>
+      <div class="modal-btn-row">
+        <button class="modal-btn cancel" id="btnModalCancel">CANCEL</button>
+        <button class="modal-btn confirm" id="btnModalConfirm">SET</button>
       </div>
     </div>
   </div>
 
+  <!-- Floating Toast Notifications -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Application Logic -->
   <script>
-    // --- BLE GATT UUIDs ---
+    /* ==========================================================================
+       FUNCTION GENERATOR 10000 - NOTHING OS WEB APPLICATION CONTROLLER
+       ========================================================================== */
+
+    // --- SOUND SYNTHESIS ENGINE (TACTILE HAPTIC CLICKS) ---
+    class AudioHaptics {
+      constructor() {
+        this.ctx = null;
+        this.enabled = true;
+      }
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (AudioContext) this.ctx = new AudioContext();
+        }
+      }
+      click(freq = 1200, dur = 0.015, gain = 0.08) {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx || this.ctx.state !== 'running') return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const g = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(freq * 0.3, this.ctx.currentTime + dur);
+          g.gain.setValueAtTime(gain, this.ctx.currentTime);
+          g.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + dur);
+          osc.connect(g);
+          g.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + dur);
+        } catch(e) {}
+      }
+      thump() { this.click(320, 0.035, 0.12); }
+      tick() { this.click(2400, 0.008, 0.05); }
+    }
+    const haptics = new AudioHaptics();
+
+    // --- CRC8 CALCULATION (POLYNOMIAL 0x07) ---
+    function calcCRC8(data) {
+      let crc = 0;
+      for (let i = 0; i < data.length; i++) {
+        crc ^= data[i];
+        for (let j = 0; j < 8; j++) {
+          crc = (crc & 0x80) ? (crc << 1) ^ 0x07 : (crc << 1);
+          crc &= 0xFF;
+        }
+      }
+      return crc;
+    }
+
+    // Build framed binary packet [0xAA, 0x55, cmd, len, payload..., crc]
+    function buildPacket(cmd, payloadArray = []) {
+      const len = payloadArray.length;
+      const header = [0xAA, 0x55, cmd, len];
+      const payloadCrc = calcCRC8(new Uint8Array(payloadArray));
+      const headerCrc = calcCRC8(new Uint8Array(header));
+      const finalCrc = (payloadCrc ^ headerCrc) & 0xFF;
+      return new Uint8Array([...header, ...payloadArray, finalCrc]);
+    }
+
+    // --- APPLICATION STATE ---
+    const state = {
+      connected: false,
+      armed: true,
+      waveform: 's',          // 's','q','t','a','p','n','h','c','e'
+      frequency: 1000.0,      // Hz
+      frequencyMultiplier: 1000,
+      amplitude: 100,         // %
+      offset: 0,              // -128..127 (-1.65V..+1.65V)
+      dutyCycle: 50,          // 1..99%
+      dacBufferEnabled: true, // true=Mode 0, false=Mode 2
+      equationStr: "sin(t) + 0.5*sin(3*t)",
+      awgSamples: new Uint8Array(64).fill(128),
+      
+      // Oscilloscope Settings
+      timebaseUs: 1000,       // 1ms
+      scopeMode: 'time',      // 'time' or 'freq'
+      phosphorGlow: true,
+      
+      // Glyph Animation Mode
+      glyphMode: 'audio_sync', // 'audio_sync', 'breathe', 'torch'
+      
+      // Telemetry
+      rttUs: 820,
+      actualFout: 1000.58,
+      freqErrorPct: 0.058,
+      samplingRateMsps: 2.049,
+      fpuComputeUs: 1820
+    };
+
+    // Initialize Default Sinc AWG pattern
+    for (let i = 0; i < 64; i++) {
+      const x = (i - 32) * 0.35;
+      const sinc = x === 0 ? 1 : Math.sin(x) / x;
+      state.awgSamples[i] = Math.max(0, Math.min(255, Math.round(128 + 120 * sinc)));
+    }
+
+    // --- WEB BLUETOOTH SERVICE MANAGER ---
     const BLE_SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
-    const BLE_CHAR_CMD_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8";
-    const BLE_CHAR_TELEM_UUID = "1c95d5e3-d8f7-413a-bf3d-7a2e5d7be87e";
+    const CHAR_CMD_UUID    = "beb5483e-36e1-4688-b7f5-ea07361b26a8";
+    const CHAR_TELEM_UUID  = "1c95d5e3-d8f7-413a-bf3d-7a2e5d7be87e";
 
     let bleDevice = null;
+    let bleServer = null;
     let cmdCharacteristic = null;
     let telemCharacteristic = null;
 
-    // --- Generator State ---
-    const gen = {
-      ch1: { enabled: true, wave: 's', freq: 1000, amp: 100, off: 0, duty: 50 },
-      ch2: { enabled: true, wave: 's', freq: 1000, amp: 100, off: 0, duty: 50 },
-      phase: 0
-    };
-
-    // --- Web Bluetooth Connection ---
-    async function toggleBLE() {
-      if (bleDevice && bleDevice.gatt.connected) {
-        bleDevice.gatt.disconnect();
+    async function connectBluetooth() {
+      if (!navigator.bluetooth) {
+        showToast("Web Bluetooth not supported. Use Chrome or Edge over HTTPS/localhost.");
         return;
       }
-
       try {
-        setBleStatus('Connecting...', false);
+        haptics.click(1600, 0.02);
+        showToast("Scanning for 'FuncGen-10000'...");
+        
         bleDevice = await navigator.bluetooth.requestDevice({
-          filters: [{ name: 'FuncGen-10000' }],
+          filters: [{ name: "FuncGen-10000" }],
           optionalServices: [BLE_SERVICE_UUID]
         });
 
         bleDevice.addEventListener('gattserverdisconnected', onDisconnected);
-        const server = await bleDevice.gatt.connect();
-        const service = await server.getPrimaryService(BLE_SERVICE_UUID);
+        showToast("Pairing with ESP32 GATT server...");
         
-        cmdCharacteristic = await service.getCharacteristic(BLE_CHAR_CMD_UUID);
-        telemCharacteristic = await service.getCharacteristic(BLE_CHAR_TELEM_UUID);
+        bleServer = await bleDevice.gatt.connect();
+        const service = await bleServer.getPrimaryService(BLE_SERVICE_UUID);
+        
+        cmdCharacteristic = await service.getCharacteristic(CHAR_CMD_UUID);
+        telemCharacteristic = await service.getCharacteristic(CHAR_TELEM_UUID);
 
         await telemCharacteristic.startNotifications();
-        telemCharacteristic.addEventListener('characteristicvaluechanged', onTelemetry);
+        telemCharacteristic.addEventListener('characteristicvaluechanged', onTelemetryNotification);
 
-        setBleStatus('Connected (BLE)', true);
-        document.getElementById('btnConnect').innerHTML = `<span>Disconnect</span>`;
-        // Send initial state to hardware
-        updateCh(1);
-        updateCh(2);
+        setConnectedUI(true);
+        showToast("CONNECTED // Hardware Synthesizer Ready");
+        haptics.thump();
+
+        // Push full state sync to STM32
+        sendFullConfiguration();
       } catch (err) {
         console.error("BLE Error:", err);
-        setBleStatus('Disconnected', false);
+        setConnectedUI(false);
+        showToast("Connection cancelled or failed: " + err.message);
       }
     }
 
     function onDisconnected() {
-      setBleStatus('Disconnected', false);
-      document.getElementById('btnConnect').innerHTML = `<span>Connect BLE</span>`;
-      document.getElementById('rttStat').style.display = 'none';
-      cmdCharacteristic = null;
+      setConnectedUI(false);
+      showToast("BLE Disconnected. Re-advertising...");
+      haptics.thump();
     }
 
-    function setBleStatus(text, isConnected) {
-      document.getElementById('bleStatus').textContent = text;
-      document.getElementById('bleDot').classList.toggle('connected', isConnected);
-    }
+    function setConnectedUI(isConnected) {
+      state.connected = isConnected;
+      const btn = document.getElementById("btnBleConnect");
+      const dot = document.getElementById("bleStatusDot");
+      const text = document.getElementById("btnBleText");
+      const linkTag = document.getElementById("telLinkState");
 
-    function onTelemetry(event) {
-      const data = new DataView(event.target.value.buffer);
-      if (data.getUint8(0) === 0x80) { // PONG / Latency RTT
-        const rttUs = data.getUint16(1, true);
-        const rttEl = document.getElementById('rttStat');
-        rttEl.textContent = `${(rttUs / 1000).toFixed(1)} ms RTT`;
-        rttEl.style.display = 'inline';
+      if (isConnected) {
+        btn.classList.add("connected");
+        dot.classList.add("connected");
+        text.innerText = "CONNECTED";
+        linkTag.innerText = "STM32 ONLINE // RTT: " + (state.rttUs / 1000).toFixed(1) + "ms";
+        linkTag.style.color = "#00ff66";
+      } else {
+        btn.classList.remove("connected");
+        dot.classList.remove("connected");
+        text.innerText = "PAIR BLE";
+        linkTag.innerText = "BLE DISCONNECTED // DEMO MODE";
+        linkTag.style.color = "var(--text-muted)";
       }
     }
 
-    // Binary transmission over BLE
-    async function sendCommandPacket(cmd, buffer) {
+    async function sendBleRaw(bytes) {
       if (!cmdCharacteristic) return;
-      const packet = new Uint8Array(1 + buffer.byteLength);
-      packet[0] = cmd;
-      packet.set(new Uint8Array(buffer), 1);
       try {
-        await cmdCharacteristic.writeValueWithoutResponse(packet);
+        await cmdCharacteristic.writeValueWithoutResponse(bytes);
       } catch (e) {
-        console.warn("BLE Write error:", e);
+        try {
+          await cmdCharacteristic.writeValue(bytes);
+        } catch (err) {
+          console.warn("Write error:", err);
+        }
       }
     }
 
-    // Build packed struct for ChannelPacket (29 bytes)
-    function buildChannelPacket(cfg) {
+    // Telemetry packet receiver [0x80, esp_status, stm_status, rtt_b0..b3, flags]
+    function onTelemetryNotification(event) {
+      const v = event.target.value;
+      if (v.byteLength >= 8) {
+        const cmd = v.getUint8(0);
+        if (cmd === 0x80) {
+          const stmConnected = v.getUint8(2) !== 0;
+          const rtt = v.getUint32(3, true);
+          state.rttUs = rtt;
+
+          const flags = v.getUint8(7);
+          const bufMode = (flags & 0x02) !== 0;
+          
+          document.getElementById("telLinkState").innerText = 
+            stmConnected ? `STM32 ONLINE // RTT: ${(rtt/1000).toFixed(2)} ms` : "STM32 OFFLINE";
+          document.getElementById("telLinkState").style.color = stmConnected ? "#00ff66" : "var(--red)";
+        }
+      }
+    }
+
+    // --- PROTOCOL PACKET BUILDERS ---
+    function sendFullConfiguration() {
+      // 29-byte ChannelPacket
       const buf = new ArrayBuffer(29);
-      const v = new DataView(buf);
-      v.setUint8(0, cfg.wave.charCodeAt(0));
-      v.setFloat32(1, cfg.freq, true);
-      v.setUint8(5, cfg.amp);
-      v.setInt8(6, cfg.off);
-      v.setUint8(7, cfg.enabled ? 1 : 0);
-      v.setUint8(8, cfg.duty);
-      v.setFloat32(9, 0, true);  // sweepTarget
-      v.setFloat32(13, 0, true); // sweepTimeMs
-      v.setUint8(17, 0);         // modType
-      v.setFloat32(18, 0, true); // modFreq
-      v.setUint8(22, 0);         // modDepth
-      v.setUint8(23, 0);         // burstEnabled
-      v.setUint32(24, 0, true);  // burstCycles
-      v.setUint8(28, 0);         // trigger
-      return buf;
+      const view = new DataView(buf);
+
+      const waveCode = state.waveform.charCodeAt(0);
+      view.setUint8(0, waveCode);
+      view.setFloat32(1, state.frequency, true);
+      view.setUint8(5, state.amplitude);
+      view.setInt8(6, state.offset);
+      view.setUint8(7, state.armed ? 1 : 0);
+      view.setUint8(8, state.dutyCycle);
+
+      const packet = buildPacket(0x01, new Uint8Array(buf));
+      sendBleRaw(packet);
     }
 
-    function updateCh(ch) {
-      const c = (ch === 1) ? gen.ch1 : gen.ch2;
-      c.enabled = document.getElementById(`ch${ch}-en`).checked;
-      c.amp = parseInt(document.getElementById(`rng-ch${ch}-amp`).value);
-      c.off = parseInt(document.getElementById(`rng-ch${ch}-off`).value);
-      c.duty = parseInt(document.getElementById(`rng-ch${ch}-duty`).value);
-
-      document.getElementById(`val-ch${ch}-amp`).textContent = `${c.amp}% (${((c.amp/100)*3.3).toFixed(2)}V)`;
-      document.getElementById(`val-ch${ch}-off`).textContent = `${Math.round((c.off/128)*1650)} mV`;
-      document.getElementById(`val-ch${ch}-duty`).textContent = `${c.duty}%`;
-
-      sendCommandPacket(ch === 1 ? 0x01 : 0x02, buildChannelPacket(c));
+    function sendDacBufferToggle(enabled) {
+      state.dacBufferEnabled = enabled;
+      const packet = buildPacket(0x07, [enabled ? 1 : 0]);
+      sendBleRaw(packet);
+      updateDacBufferUI();
+      showToast(`DAC Buffer: ${enabled ? 'ON (Mode 0 ~0.2V-3.1V)' : 'OFF (Mode 2 Rail-to-Rail 0-3.3V)'}`);
     }
 
-    function setFreq(ch, val) {
-      document.getElementById(`rng-ch${ch}-freq`).value = val;
-      onFreqSlide(ch, val);
+    function sendEquationToHardware(formula) {
+      state.equationStr = formula;
+      const enc = new TextEncoder();
+      const bytes = enc.encode(formula.trim());
+      const packet = buildPacket(0x05, Array.from(bytes));
+      sendBleRaw(packet);
+      showToast("Uploaded equation to STM32 2048-sample VM");
+      haptics.thump();
     }
 
-    function onFreqSlide(ch, val) {
-      const c = (ch === 1) ? gen.ch1 : gen.ch2;
-      c.freq = parseFloat(val);
-      document.getElementById(`val-ch${ch}-freq`).textContent = `${c.freq.toLocaleString()} Hz`;
-      document.getElementById(`lbl-ch${ch}-f`).textContent = `${c.freq.toLocaleString()} Hz`;
-      updateCh(ch);
+    function sendAwgToHardware() {
+      // Send in 4 sequential chunks of 16 bytes: CMD 0x10..0x13
+      showToast("Uploading 64 AWG points to STM32...");
+      for (let chunk = 0; chunk < 4; chunk++) {
+        const payload = [0x01]; // Channel 1 indicator
+        for (let i = 0; i < 16; i++) {
+          payload.push(state.awgSamples[chunk * 16 + i]);
+        }
+        const packet = buildPacket(0x10 + chunk, payload);
+        setTimeout(() => sendBleRaw(packet), chunk * 35);
+      }
+      setTimeout(() => {
+        state.waveform = 'c';
+        updateWaveformUI();
+        showToast("AWG Active on PA4 (64-pt continuous wrap)");
+        haptics.thump();
+      }, 160);
     }
 
-    function setWave(ch, w) {
-      const c = (ch === 1) ? gen.ch1 : gen.ch2;
-      c.wave = w;
-      const names = { s: 'SINE', q: 'SQUARE', t: 'TRIANGLE', a: 'SAW', p: 'PWM', n: 'NOISE', c: 'AWG' };
-      document.getElementById(`lbl-ch${ch}-w`).textContent = names[w] || 'CUSTOM';
+    // --- UI CONTROLLERS & VALUE FORMATTERS ---
+    function updateFrequency(newFreq) {
+      state.frequency = Math.max(1, Math.min(128000, newFreq));
+      
+      const f = state.frequency;
+      document.getElementById("dispFreqVal").innerText = f >= 1000 ? (f / 1000).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 3 }) : Math.round(f);
+      
+      // Calculate discrete sampling rate and ARR
+      let n = 2048;
+      if (f > 64000) n = 16;
+      else if (f > 32000) n = 32;
+      else if (f > 16000) n = 64;
+      else if (f > 8000) n = 128;
+      else if (f > 4000) n = 256;
+      else if (f > 2000) n = 512;
+      else if (f > 1000) n = 1024;
 
-      // Update button active states
-      const card = document.querySelector(`.ch-card.ch${ch}`);
-      card.querySelectorAll('.wave-btn').forEach(b => b.classList.remove('active'));
-      event.target.classList.add('active');
+      const fsDesired = f * n;
+      const timClk = 250000000;
+      const div = timClk / fsDesired;
+      let psc = 0;
+      let arr = Math.round(div) - 1;
+      if (arr > 65535) {
+        psc = Math.floor(div / 65535);
+        arr = Math.round(div / (psc + 1)) - 1;
+      }
+      arr = Math.max(1, arr);
 
-      updateCh(ch);
+      const actualFs = timClk / ((psc + 1) * (arr + 1));
+      const actualFout = actualFs / n;
+      const errorPct = ((actualFout - f) / f) * 100;
+
+      state.actualFout = actualFout;
+      state.freqErrorPct = errorPct;
+      state.samplingRateMsps = actualFs / 1000000;
+
+      document.getElementById("dispFreqSub").innerText = `${(f/1000).toFixed(4)} kHz // ACT: ${actualFout.toFixed(2)} Hz (N=${n})`;
+      document.getElementById("telFs").innerText = `${(actualFs / 1000000).toFixed(3)} MSPS`;
+      document.getElementById("telArrPsc").innerText = `${arr} // ${psc}`;
+      document.getElementById("telError").innerText = `${errorPct >= 0 ? '+' : ''}${errorPct.toFixed(3)} %`;
+      document.getElementById("telCompute").innerText = n === 2048 ? "1.82 ms" : `${(n * 0.6).toFixed(1)} µs`;
+
+      document.getElementById("hudFreq").innerText = `F: ${f >= 1000 ? (f/1000).toFixed(3)+' kHz' : f.toFixed(1)+' Hz'}`;
+
+      sendFullConfiguration();
     }
 
-    function onPhaseSlide(val) {
-      gen.phase = parseInt(val);
-      document.getElementById('val-phase').textContent = `${gen.phase}°`;
+    function updateAmplitude(newAmp) {
+      state.amplitude = Math.max(0, Math.min(100, Math.round(newAmp)));
+      const vpp = (state.amplitude / 100 * 3.3).toFixed(2);
+      const vrms = (state.amplitude / 100 * 3.3 / (2 * Math.SQRT2)).toFixed(2);
+      
+      document.getElementById("dispAmpVal").innerText = `${state.amplitude}%`;
+      document.getElementById("dispAmpSub").innerText = `${vpp} Vpp // ${vrms} Vrms`;
+      document.getElementById("hudVpp").innerText = `VPP: ${vpp} V`;
+      document.getElementById("hudVrms").innerText = `VRMS: ${vrms} V`;
 
-      const buf = new ArrayBuffer(4);
-      new DataView(buf).setInt32(0, gen.phase, true);
-      sendCommandPacket(0x03, buf);
+      sendFullConfiguration();
     }
 
-    // --- Live Canvas Visualizer ---
-    const cvs = document.getElementById('previewCanvas');
-    const ctx = cvs.getContext('2d');
-    let phaseAcc1 = 0, phaseAcc2 = 0;
+    function updateOffset(newOffset) {
+      state.offset = Math.max(-128, Math.min(127, Math.round(newOffset)));
+      const v = ((state.offset / 128) * 1.65).toFixed(2);
+      document.getElementById("dispOffsetVal").innerText = `${v >= 0 ? '+' : ''}${v} V`;
+      document.getElementById("dispOffsetSub").innerText = `BIAS: ${(1.65 + parseFloat(v)).toFixed(2)} V (OFFSET ${state.offset})`;
 
-    function renderPreview() {
-      cvs.width = cvs.clientWidth * window.devicePixelRatio;
-      cvs.height = cvs.clientHeight * window.devicePixelRatio;
-      ctx.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
+      sendFullConfiguration();
+    }
 
-      const W = cvs.clientWidth, H = cvs.clientHeight;
-      ctx.fillStyle = '#060b0f';
-      ctx.fillRect(0, 0, W, H);
+    function updateDuty(newDuty) {
+      state.dutyCycle = Math.max(1, Math.min(99, Math.round(newDuty)));
+      document.getElementById("dispOffsetVal").innerText = `${state.dutyCycle}%`;
+      document.getElementById("dispOffsetSub").innerText = `PULSE HIGH: ${state.dutyCycle}% // LOW: ${100 - state.dutyCycle}%`;
 
-      // Grid lines
-      ctx.strokeStyle = '#0e1d27';
+      sendFullConfiguration();
+    }
+
+    function updateDacBufferUI() {
+      const btnOn = document.getElementById("btnBufOn");
+      const btnOff = document.getElementById("btnBufOff");
+      const hudBuf = document.getElementById("hudBuffer");
+      if (state.dacBufferEnabled) {
+        btnOn.classList.add("active");
+        btnOff.classList.remove("active");
+        hudBuf.innerText = "DAC: MODE 0 [BUF_ON]";
+      } else {
+        btnOn.classList.remove("active");
+        btnOff.classList.add("active");
+        hudBuf.innerText = "DAC: MODE 2 [RAIL-TO-RAIL]";
+      }
+    }
+
+    function updateWaveformUI() {
+      document.querySelectorAll(".wave-pill-btn").forEach(btn => {
+        if (btn.dataset.wave === state.waveform) {
+          btn.classList.add("active");
+        } else {
+          btn.classList.remove("active");
+        }
+      });
+
+      // Show duty cycle controls if PWM is selected
+      const isPwm = state.waveform === 'p';
+      const label = document.getElementById("labelOffsetOrDuty");
+      const unit = document.getElementById("unitOffsetOrDuty");
+      const slider = document.getElementById("sliderOffset");
+      const group = document.getElementById("groupOffsetQuick");
+
+      if (isPwm) {
+        label.innerText = "PWM_DUTY_CYCLE";
+        unit.innerText = "[1% - 99%]";
+        slider.min = "1";
+        slider.max = "99";
+        slider.value = state.dutyCycle;
+        group.style.display = "none";
+        updateDuty(state.dutyCycle);
+      } else {
+        label.innerText = "DC_OFFSET";
+        unit.innerText = "[-1.65V .. +1.65V]";
+        slider.min = "-128";
+        slider.max = "127";
+        slider.value = state.offset;
+        group.style.display = "flex";
+        updateOffset(state.offset);
+      }
+    }
+
+    // --- OSCILLOSCOPE CRT CANVAS RENDERER ---
+    const scopeCanvas = document.getElementById("scopeCanvas");
+    const scopeCtx = scopeCanvas.getContext("2d");
+    let animFrameId = null;
+
+    function resizeScope() {
+      const rect = scopeCanvas.parentElement.getBoundingClientRect();
+      scopeCanvas.width = rect.width * window.devicePixelRatio;
+      scopeCanvas.height = rect.height * window.devicePixelRatio;
+    }
+    window.addEventListener('resize', resizeScope);
+    setTimeout(resizeScope, 50);
+
+    let phaseAcc = 0;
+    function renderOscilloscope() {
+      animFrameId = requestAnimationFrame(renderOscilloscope);
+      const w = scopeCanvas.width;
+      const h = scopeCanvas.height;
+      if (w === 0 || h === 0) return;
+
+      // Dark background with subtle persist decay
+      if (state.phosphorGlow) {
+        scopeCtx.fillStyle = "rgba(4, 4, 4, 0.22)";
+      } else {
+        scopeCtx.fillStyle = "#040404";
+      }
+      scopeCtx.fillRect(0, 0, w, h);
+
+      // Draw Nothing dot grid reticle (10 div horizontal x 8 div vertical)
+      const numDivX = 10;
+      const numDivY = 8;
+      const stepX = w / numDivX;
+      const stepY = h / numDivY;
+
+      scopeCtx.fillStyle = "rgba(255, 255, 255, 0.09)";
+      for (let x = 0; x <= numDivX; x++) {
+        for (let y = 0; y <= numDivY; y++) {
+          const px = x * stepX;
+          const py = y * stepY;
+          scopeCtx.fillRect(px - 1, py - 1, 2, 2);
+          
+          // Sub-divisions ticks
+          if (x < numDivX && y < numDivY) {
+            scopeCtx.fillRect(px + stepX / 2 - 0.5, py + stepY / 2 - 0.5, 1, 1);
+          }
+        }
+      }
+
+      // Center reference crosshair
+      scopeCtx.strokeStyle = "rgba(255, 255, 255, 0.12)";
+      scopeCtx.lineWidth = 1;
+      scopeCtx.setLineDash([2, 4]);
+      scopeCtx.beginPath();
+      scopeCtx.moveTo(0, h / 2); scopeCtx.lineTo(w, h / 2);
+      scopeCtx.moveTo(w / 2, 0); scopeCtx.lineTo(w / 2, h);
+      scopeCtx.stroke();
+      scopeCtx.setLineDash([]);
+
+      if (!state.armed) {
+        // Muted Flatline
+        scopeCtx.strokeStyle = "rgba(215, 25, 33, 0.8)";
+        scopeCtx.lineWidth = 2 * window.devicePixelRatio;
+        scopeCtx.beginPath();
+        scopeCtx.moveTo(0, h / 2);
+        scopeCtx.lineTo(w, h / 2);
+        scopeCtx.stroke();
+        return;
+      }
+
+      // Synthesize Visual Waveform
+      const freq = state.frequency;
+      const amp = state.amplitude / 100;
+      const offset = (state.offset / 128) * (h * 0.35);
+      const centerY = h / 2 - offset;
+      const scaleY = (h * 0.42) * amp;
+
+      // Animate phase smoothly
+      phaseAcc += (freq * 0.000035);
+
+      if (state.scopeMode === 'time') {
+        // Time Domain Trace
+        scopeCtx.beginPath();
+        scopeCtx.lineWidth = 2.4 * window.devicePixelRatio;
+        scopeCtx.strokeStyle = "#ffffff";
+        scopeCtx.shadowColor = "rgba(255, 255, 255, 0.85)";
+        scopeCtx.shadowBlur = state.phosphorGlow ? 10 * window.devicePixelRatio : 0;
+
+        const numPoints = Math.min(w, 800);
+        for (let i = 0; i < numPoints; i++) {
+          const normX = i / numPoints;
+          // Number of cycles visible based on timebase
+          const cycles = (state.timebaseUs * 0.000001) * freq * 8;
+          const theta = (normX * cycles * 2 * Math.PI) + phaseAcc;
+          const sample = evaluateWaveSample(theta, normX);
+          const py = centerY - (sample * scaleY);
+
+          if (i === 0) scopeCtx.moveTo(i * (w / numPoints), py);
+          else scopeCtx.lineTo(i * (w / numPoints), py);
+        }
+        scopeCtx.stroke();
+        scopeCtx.shadowBlur = 0;
+      } else {
+        // FFT Spectrum Analyzer Display
+        renderSpectrum(w, h, freq, amp);
+      }
+    }
+
+    function evaluateWaveSample(theta, normX) {
+      const t = theta % (2 * Math.PI);
+      const normCycle = (t < 0 ? t + 2 * Math.PI : t) / (2 * Math.PI);
+      switch (state.waveform) {
+        case 's': return Math.sin(t);
+        case 'q': return normCycle < (state.dutyCycle / 100) ? 1.0 : -1.0;
+        case 't': return normCycle < 0.5 ? (4 * normCycle - 1) : (3 - 4 * normCycle);
+        case 'a': return 2 * normCycle - 1;
+        case 'p': return normCycle < (state.dutyCycle / 100) ? 1.0 : -1.0;
+        case 'n': return (Math.random() * 2 - 1);
+        case 'h': return (Math.random() * 2 - 1); // True HW noise preview
+        case 'c': {
+          const idx = Math.floor(normCycle * 64) % 64;
+          return (state.awgSamples[idx] / 127.5) - 1.0;
+        }
+        case 'e': {
+          try {
+            // Quick preview of user math expression
+            const x = normCycle;
+            return Math.sin(t) + 0.5 * Math.sin(3 * t); // Fallback representative harmonic
+          } catch(e) { return Math.sin(t); }
+        }
+        default: return Math.sin(t);
+      }
+    }
+
+    function renderSpectrum(w, h, fundFreq, amp) {
+      const bars = 64;
+      const barWidth = w / bars;
+      scopeCtx.fillStyle = "#ffffff";
+      scopeCtx.shadowColor = "rgba(255, 255, 255, 0.6)";
+      scopeCtx.shadowBlur = 8;
+
+      for (let i = 0; i < bars; i++) {
+        let mag = 0;
+        const harmonic = i + 1;
+        if (state.waveform === 's' && harmonic === 1) mag = 0.9 * amp;
+        else if (state.waveform === 'q' && (harmonic % 2 === 1)) mag = (0.85 / harmonic) * amp;
+        else if (state.waveform === 't' && (harmonic % 2 === 1)) mag = (0.85 / (harmonic * harmonic)) * amp;
+        else if (state.waveform === 'a') mag = (0.8 / harmonic) * amp;
+        else if (state.waveform === 'n' || state.waveform === 'h') mag = (Math.random() * 0.4 + 0.1) * amp;
+        else mag = (Math.random() * 0.05);
+
+        const barH = mag * h * 0.8;
+        scopeCtx.fillRect(i * barWidth + 2, h - barH, barWidth - 4, barH);
+      }
+      scopeCtx.shadowBlur = 0;
+    }
+
+    // --- NOTHING GLYPH INTERFACE ILLUMINATION CONTROLLER ---
+    function updateGlyphLighting() {
+      requestAnimationFrame(updateGlyphLighting);
+      if (!state.armed) {
+        document.querySelectorAll(".glyph-glow-path").forEach(el => el.style.opacity = "0.08");
+        return;
+      }
+
+      const t = performance.now() * 0.001;
+      let intensity = 0.8;
+
+      if (state.glyphMode === 'audio_sync') {
+        const speed = Math.min(30, state.frequency * 0.02);
+        intensity = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(t * speed)) * (state.amplitude / 100);
+      } else if (state.glyphMode === 'breathe') {
+        intensity = 0.2 + 0.8 * (0.5 + 0.5 * Math.sin(t * 1.8));
+      } else if (state.glyphMode === 'torch') {
+        intensity = 1.0;
+      }
+
+      const cam1 = document.getElementById("glyphCam1");
+      const cam2 = document.getElementById("glyphCam2");
+      const slash = document.getElementById("glyphSlash");
+      const centerC = document.getElementById("glyphCenterC");
+      const centerDot = document.getElementById("glyphCenterDot");
+      const bottomBar = document.getElementById("glyphBottomBar");
+      const bottomDot = document.getElementById("glyphBottomDot");
+
+      if (cam1) cam1.style.opacity = intensity.toFixed(2);
+      if (cam2) cam2.style.opacity = intensity.toFixed(2);
+      if (slash) slash.style.opacity = (intensity * 0.85).toFixed(2);
+      if (centerC) centerC.style.opacity = intensity.toFixed(2);
+      if (centerDot) centerDot.style.opacity = (intensity * 1.1).toFixed(2);
+      if (bottomBar) bottomBar.style.opacity = intensity.toFixed(2);
+      if (bottomDot) bottomDot.style.opacity = intensity.toFixed(2);
+    }
+
+    // --- EQUATION PREVIEW CANVAS ---
+    function updateEquationPreview() {
+      const canvas = document.getElementById("eqnPreviewCanvas");
+      const ctx = canvas.getContext("2d");
+      canvas.width = canvas.parentElement.getBoundingClientRect().width * window.devicePixelRatio;
+      canvas.height = 90 * window.devicePixelRatio;
+      
+      const w = canvas.width;
+      const h = canvas.height;
+      ctx.fillStyle = "#050505";
+      ctx.fillRect(0, 0, w, h);
+
+      // Baseline
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
       ctx.lineWidth = 1;
-      for (let x = 0; x < W; x += W / 10) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
-      for (let y = 0; y < H; y += H / 6) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+      ctx.beginPath();
+      ctx.moveTo(0, h/2); ctx.lineTo(w, h/2);
+      ctx.stroke();
 
-      const cy = H / 2;
+      // Plot formula
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 2 * window.devicePixelRatio;
+      ctx.beginPath();
 
-      // Draw Channel 1 (Cyan)
-      if (gen.ch1.enabled) {
-        ctx.strokeStyle = '#38bdf8';
-        ctx.lineWidth = 2.2;
-        ctx.beginPath();
-        for (let x = 0; x < W; x++) {
-          const t = (x / W) * (2 * Math.PI) * (gen.ch1.freq / 200) + phaseAcc1;
-          const y = cy - Math.sin(t) * (H * 0.38) * (gen.ch1.amp / 100);
-          if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-        }
-        ctx.stroke();
+      const numPoints = 300;
+      for (let i = 0; i < numPoints; i++) {
+        const x = i / numPoints;
+        const t = x * 2 * Math.PI;
+        let y = 0;
+        try {
+          // Safe evaluation of simple math
+          y = evalFormulaJs(state.equationStr, x, t);
+        } catch(e) { y = Math.sin(t); }
+
+        const py = (h/2) - (Math.max(-1.5, Math.min(1.5, y)) * (h * 0.38));
+        if (i === 0) ctx.moveTo(i * (w / numPoints), py);
+        else ctx.lineTo(i * (w / numPoints), py);
       }
-
-      // Draw Channel 2 (Amber)
-      if (gen.ch2.enabled) {
-        ctx.strokeStyle = '#f59e0b';
-        ctx.lineWidth = 2.2;
-        ctx.beginPath();
-        const pRad = gen.phase * (Math.PI / 180);
-        for (let x = 0; x < W; x++) {
-          const t = (x / W) * (2 * Math.PI) * (gen.ch2.freq / 200) + phaseAcc2 + pRad;
-          const y = cy - Math.sin(t) * (H * 0.38) * (gen.ch2.amp / 100);
-          if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-        }
-        ctx.stroke();
-      }
-
-      phaseAcc1 += (gen.ch1.freq * 0.0001);
-      phaseAcc2 += (gen.ch2.freq * 0.0001);
-      requestAnimationFrame(renderPreview);
+      ctx.stroke();
     }
-    renderPreview();
 
-    // --- AWG Drawer Logic ---
-    let activeAwgCh = 1;
-    let awgSamples = new Uint8Array(64).fill(128);
-    const awgCvs = document.getElementById('awgCanvas');
-    const awgCtx = awgCvs.getContext('2d');
-    let isDrawing = false;
-
-    function openAwgModal(ch) {
-      activeAwgCh = ch;
-      document.getElementById('awgModalTitle').textContent = `Arbitrary Waveform Editor - Channel ${ch}`;
-      document.getElementById('awgModal').classList.add('active');
-      drawAwgCanvas();
+    function evalFormulaJs(expr, x, t) {
+      // Clean and safe JS math evaluator
+      let code = expr
+        .replace(/\bsin\b/g, 'Math.sin')
+        .replace(/\bcos\b/g, 'Math.cos')
+        .replace(/\btan\b/g, 'Math.tan')
+        .replace(/\bsinc\b/g, '(v => Math.abs(v)<1e-5?1:Math.sin(v)/v)')
+        .replace(/\babs\b/g, 'Math.abs')
+        .replace(/\bexp\b/g, 'Math.exp')
+        .replace(/\bsqrt\b/g, 'Math.sqrt')
+        .replace(/\bpi\b/gi, 'Math.PI')
+        .replace(/\^/g, '**');
+      
+      const fn = new Function('x', 't', `return ${code};`);
+      const res = fn(x, t);
+      return isNaN(res) || !isFinite(res) ? 0 : res;
     }
-    function closeAwgModal() { document.getElementById('awgModal').classList.remove('active'); }
 
-    function drawAwgCanvas() {
-      awgCvs.width = awgCvs.clientWidth;
-      awgCvs.height = awgCvs.clientHeight;
-      const W = awgCvs.width, H = awgCvs.height;
-      awgCtx.fillStyle = '#060b0f';
-      awgCtx.fillRect(0, 0, W, H);
+    // --- AWG TOUCH SCULPTOR CANVAS ---
+    const awgCanvas = document.getElementById("awgCanvas");
+    const awgCtx = awgCanvas.getContext("2d");
+    let isDrawingAwg = false;
 
-      awgCtx.strokeStyle = '#10b981';
-      awgCtx.lineWidth = 2;
+    function resizeAwg() {
+      awgCanvas.width = awgCanvas.parentElement.getBoundingClientRect().width * window.devicePixelRatio;
+      awgCanvas.height = awgCanvas.parentElement.getBoundingClientRect().height * window.devicePixelRatio;
+      renderAwg();
+    }
+    setTimeout(resizeAwg, 80);
+
+    function renderAwg() {
+      const w = awgCanvas.width;
+      const h = awgCanvas.height;
+      awgCtx.fillStyle = "#040404";
+      awgCtx.fillRect(0, 0, w, h);
+
+      // Grid
+      awgCtx.strokeStyle = "rgba(255, 255, 255, 0.08)";
+      awgCtx.lineWidth = 1;
       awgCtx.beginPath();
+      awgCtx.moveTo(0, h/2); awgCtx.lineTo(w, h/2);
+      awgCtx.stroke();
+
+      // Waveform Points and Line
+      awgCtx.strokeStyle = "#ffffff";
+      awgCtx.lineWidth = 2 * window.devicePixelRatio;
+      awgCtx.beginPath();
+
       for (let i = 0; i < 64; i++) {
-        const x = (i / 63) * W;
-        const y = H - (awgSamples[i] / 255) * H;
-        if (i === 0) awgCtx.moveTo(x, y); else awgCtx.lineTo(x, y);
+        const px = (i / 63) * w;
+        const py = h - (state.awgSamples[i] / 255) * h;
+        if (i === 0) awgCtx.moveTo(px, py);
+        else awgCtx.lineTo(px, py);
       }
       awgCtx.stroke();
-    }
 
-    awgCvs.addEventListener('mousedown', (e) => { isDrawing = true; setAwgPoint(e); });
-    window.addEventListener('mouseup', () => { isDrawing = false; });
-    awgCvs.addEventListener('mousemove', (e) => { if (isDrawing) setAwgPoint(e); });
-
-    function setAwgPoint(e) {
-      const rect = awgCvs.getBoundingClientRect();
-      const x = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
-      const y = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
-      const idx = Math.floor((x / rect.width) * 64);
-      const val = Math.floor((1 - (y / rect.height)) * 255);
-      if (idx >= 0 && idx < 64) {
-        awgSamples[idx] = val;
-        drawAwgCanvas();
+      // Sample dots
+      awgCtx.fillStyle = "var(--red)";
+      for (let i = 0; i < 64; i += 4) {
+        const px = (i / 63) * w;
+        const py = h - (state.awgSamples[i] / 255) * h;
+        awgCtx.fillRect(px - 2, py - 2, 4, 4);
       }
     }
 
-    function presetAwg(type) {
-      for (let i = 0; i < 64; i++) {
-        const t = (i / 64) * 2 * Math.PI;
-        if (type === 'sinc') {
-          const x = (i - 32) * 0.3;
-          awgSamples[i] = Math.floor(128 + 120 * (x === 0 ? 1 : Math.sin(x) / x));
-        } else if (type === 'ecg') {
-          if (i === 20) awgSamples[i] = 230;
-          else if (i === 22) awgSamples[i] = 40;
-          else if (i > 35 && i < 48) awgSamples[i] = 160;
-          else awgSamples[i] = 128;
-        } else if (type === 'exp') {
-          awgSamples[i] = Math.floor(255 * Math.exp(-i / 14));
-        } else if (type === 'stair') {
-          awgSamples[i] = Math.floor((Math.floor(i / 8) / 8) * 255);
-        } else if (type === 'clear') {
-          awgSamples[i] = 128;
+    function handleAwgPointer(e) {
+      const rect = awgCanvas.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      const x = Math.max(0, Math.min(rect.width, clientX - rect.left));
+      const y = Math.max(0, Math.min(rect.height, clientY - rect.top));
+
+      const idx = Math.min(63, Math.floor((x / rect.width) * 64));
+      const val = Math.max(0, Math.min(255, Math.round((1 - y / rect.height) * 255)));
+
+      state.awgSamples[idx] = val;
+      renderAwg();
+      haptics.tick();
+    }
+
+    awgCanvas.addEventListener('mousedown', (e) => { isDrawingAwg = true; handleAwgPointer(e); });
+    window.addEventListener('mousemove', (e) => { if (isDrawingAwg) handleAwgPointer(e); });
+    window.addEventListener('mouseup', () => { isDrawingAwg = false; });
+    awgCanvas.addEventListener('touchstart', (e) => { isDrawingAwg = true; handleAwgPointer(e); }, { passive: true });
+    window.addEventListener('touchmove', (e) => { if (isDrawingAwg) handleAwgPointer(e); }, { passive: true });
+    window.addEventListener('touchend', () => { isDrawingAwg = false; });
+
+    // --- TOAST MANAGER ---
+    function showToast(msg) {
+      const container = document.getElementById("toastContainer");
+      const toast = document.createElement("div");
+      toast.className = "toast";
+      toast.innerHTML = `<span class="brand-red-dot" style="width:6px; height:6px;"></span> ${msg}`;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(10px)';
+        setTimeout(() => toast.remove(), 300);
+      }, 3200);
+    }
+
+    // --- EVENT LISTENERS & WIRING ---
+    document.addEventListener("DOMContentLoaded", () => {
+      // BLE Connect
+      document.getElementById("btnBleConnect").addEventListener("click", connectBluetooth);
+
+      // Master Armed Toggle
+      document.getElementById("masterToggle").addEventListener("click", () => {
+        state.armed = !state.armed;
+        const toggle = document.getElementById("masterToggle");
+        const text = document.getElementById("masterToggleText");
+        if (state.armed) {
+          toggle.classList.add("active");
+          text.innerText = "ARMED";
+          showToast("Output ARMED (Synthesizing on PA4)");
+          haptics.thump();
+        } else {
+          toggle.classList.remove("active");
+          text.innerText = "MUTED";
+          showToast("Output MUTED (Midpoint DC)");
+          haptics.click(400, 0.04);
         }
-      }
-      drawAwgCanvas();
-    }
+        sendFullConfiguration();
+      });
 
-    async function sendAwgToHardware() {
-      // Send in 4 BLE packets of 16 samples
-      for (let c = 0; c < 4; c++) {
-        const chunk = new Uint8Array(17);
-        chunk[0] = activeAwgCh;
-        chunk.set(awgSamples.slice(c * 16, (c + 1) * 16), 1);
-        await sendCommandPacket(0x10 + c, chunk.buffer);
-      }
-      setWave(activeAwgCh, 'c');
-      closeAwgModal();
-      alert(`Custom waveform uploaded successfully to Channel ${activeAwgCh}!`);
-    }
+      // Audio Feedback Toggle
+      document.getElementById("btnAudioFeedback").addEventListener("click", (e) => {
+        haptics.enabled = !haptics.enabled;
+        e.currentTarget.classList.toggle("active", haptics.enabled);
+        showToast(`Tactile Clicks: ${haptics.enabled ? 'ENABLED' : 'DISABLED'}`);
+      });
+
+      // Scope Views
+      document.getElementById("btnViewTime").addEventListener("click", (e) => {
+        state.scopeMode = 'time';
+        e.currentTarget.classList.add("active");
+        document.getElementById("btnViewFreq").classList.remove("active");
+        haptics.click();
+      });
+      document.getElementById("btnViewFreq").addEventListener("click", (e) => {
+        state.scopeMode = 'freq';
+        e.currentTarget.classList.add("active");
+        document.getElementById("btnViewTime").classList.remove("active");
+        haptics.click();
+      });
+
+      // Scope Timebase
+      document.querySelectorAll("[data-tbase]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          document.querySelectorAll("[data-tbase]").forEach(b => b.classList.remove("active"));
+          btn.classList.add("active");
+          state.timebaseUs = parseInt(btn.dataset.tbase);
+          haptics.tick();
+        });
+      });
+
+      // Phosphor Glow Toggle
+      document.getElementById("btnPhosphorGlow").addEventListener("click", (e) => {
+        state.phosphorGlow = !state.phosphorGlow;
+        e.currentTarget.classList.toggle("active", state.phosphorGlow);
+        e.currentTarget.innerText = `GLOW: ${state.phosphorGlow ? 'ON' : 'OFF'}`;
+        haptics.click();
+      });
+
+      // Glyph Mode Buttons
+      document.getElementById("btnGlyphAudioSync").addEventListener("click", () => {
+        state.glyphMode = 'audio_sync';
+        document.getElementById("glyphModeLabel").innerText = "AUDIO_SYNC";
+        haptics.click();
+      });
+      document.getElementById("btnGlyphBreathing").addEventListener("click", () => {
+        state.glyphMode = 'breathe';
+        document.getElementById("glyphModeLabel").innerText = "BREATHE";
+        haptics.click();
+      });
+      document.getElementById("btnGlyphTorch").addEventListener("click", () => {
+        state.glyphMode = 'torch';
+        document.getElementById("glyphModeLabel").innerText = "TORCH";
+        haptics.click();
+      });
+
+      // Waveform Buttons
+      document.querySelectorAll(".wave-pill-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          state.waveform = btn.dataset.wave;
+          updateWaveformUI();
+          sendFullConfiguration();
+          haptics.thump();
+          showToast(`Waveform: ${btn.querySelector('.wave-name').innerText}`);
+        });
+      });
+
+      // Sliders
+      const sliderFreq = document.getElementById("sliderFreq");
+      sliderFreq.addEventListener("input", (e) => {
+        const val = parseFloat(e.target.value);
+        updateFrequency(val * (state.frequencyMultiplier / 1000));
+        haptics.tick();
+      });
+
+      const sliderAmp = document.getElementById("sliderAmp");
+      sliderAmp.addEventListener("input", (e) => {
+        updateAmplitude(e.target.value);
+        haptics.tick();
+      });
+
+      const sliderOffset = document.getElementById("sliderOffset");
+      sliderOffset.addEventListener("input", (e) => {
+        if (state.waveform === 'p') {
+          updateDuty(e.target.value);
+        } else {
+          updateOffset(e.target.value);
+        }
+        haptics.tick();
+      });
+
+      // Decades Multipliers
+      document.querySelectorAll("[data-mult]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          document.querySelectorAll("[data-mult]").forEach(b => b.classList.remove("active"));
+          btn.classList.add("active");
+          state.frequencyMultiplier = parseInt(btn.dataset.mult);
+          sliderFreq.max = (state.frequencyMultiplier === 10000) ? "128" : "1000";
+          updateFrequency(parseFloat(sliderFreq.value) * (state.frequencyMultiplier / 1000));
+          haptics.click();
+        });
+      });
+
+      // Quick Amplitudes
+      document.querySelectorAll("[data-amp]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          document.querySelectorAll("[data-amp]").forEach(b => b.classList.remove("active"));
+          btn.classList.add("active");
+          sliderAmp.value = btn.dataset.amp;
+          updateAmplitude(btn.dataset.amp);
+          haptics.click();
+        });
+      });
+
+      // Quick Offsets
+      document.querySelectorAll("[data-off]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          document.querySelectorAll("[data-off]").forEach(b => b.classList.remove("active"));
+          btn.classList.add("active");
+          sliderOffset.value = btn.dataset.off;
+          updateOffset(btn.dataset.off);
+          haptics.click();
+        });
+      });
+
+      // DAC Buffer Mode Buttons
+      document.getElementById("btnBufOn").addEventListener("click", () => {
+        sendDacBufferToggle(true);
+        haptics.click();
+      });
+      document.getElementById("btnBufOff").addEventListener("click", () => {
+        sendDacBufferToggle(false);
+        haptics.click();
+      });
+
+      // Equation Inputs & Compile
+      const inputEqn = document.getElementById("inputEquation");
+      inputEqn.addEventListener("input", () => {
+        state.equationStr = inputEqn.value;
+        updateEquationPreview();
+      });
+
+      document.getElementById("btnCompileEqn").addEventListener("click", () => {
+        sendEquationToHardware(inputEqn.value);
+      });
+
+      document.querySelectorAll(".eqn-chip").forEach(chip => {
+        chip.addEventListener("click", () => {
+          inputEqn.value = chip.dataset.formula;
+          state.equationStr = inputEqn.value;
+          updateEquationPreview();
+          sendEquationToHardware(inputEqn.value);
+        });
+      });
+
+      // AWG Actions
+      document.getElementById("btnAwgClear").addEventListener("click", () => {
+        state.awgSamples.fill(128);
+        renderAwg();
+        haptics.click();
+      });
+
+      document.getElementById("btnAwgSmooth").addEventListener("click", () => {
+        // 3-point moving average smoothing
+        const copy = new Uint8Array(state.awgSamples);
+        for (let i = 0; i < 64; i++) {
+          const prev = copy[(i + 63) % 64];
+          const curr = copy[i];
+          const next = copy[(i + 1) % 64];
+          state.awgSamples[i] = Math.round((prev + curr * 2 + next) / 4);
+        }
+        renderAwg();
+        haptics.click();
+      });
+
+      document.getElementById("btnAwgSend").addEventListener("click", () => {
+        sendAwgToHardware();
+      });
+
+      // Modal Numeric Entry for Frequency
+      const modal = document.getElementById("modalBackdrop");
+      const modalInput = document.getElementById("modalInput");
+
+      document.getElementById("boxFreq").addEventListener("click", () => {
+        modalInput.value = state.frequency;
+        modal.style.display = "flex";
+        modalInput.focus();
+        haptics.click();
+      });
+
+      document.getElementById("btnModalCancel").addEventListener("click", () => {
+        modal.style.display = "none";
+      });
+
+      document.getElementById("btnModalConfirm").addEventListener("click", () => {
+        const val = parseFloat(modalInput.value);
+        if (!isNaN(val) && val >= 1 && val <= 128000) {
+          updateFrequency(val);
+          sliderFreq.value = Math.min(1000, val);
+          modal.style.display = "none";
+          haptics.thump();
+          showToast(`Frequency set to: ${val} Hz`);
+        } else {
+          showToast("Enter frequency between 1 Hz and 128,000 Hz");
+        }
+      });
+
+      // Presets
+      document.querySelectorAll(".preset-chip").forEach(chip => {
+        chip.addEventListener("click", () => {
+          const p = chip.dataset.preset;
+          if (p === 'audio') {
+            state.waveform = 's';
+            updateFrequency(1000);
+            updateAmplitude(100);
+            updateOffset(0);
+          } else if (p === 'pwm') {
+            state.waveform = 'p';
+            updateFrequency(25000);
+            updateAmplitude(100);
+            state.dutyCycle = 60;
+          } else if (p === 'sinc') {
+            state.waveform = 'c';
+            updateFrequency(500);
+            updateAmplitude(90);
+          } else if (p === 'noise') {
+            state.waveform = 'h'; // HW noise
+            updateFrequency(10000);
+            updateAmplitude(100);
+          }
+          updateWaveformUI();
+          sendFullConfiguration();
+          haptics.thump();
+          showToast(`Loaded Preset: ${chip.innerText}`);
+        });
+      });
+
+      document.getElementById("btnSavePreset").addEventListener("click", () => {
+        const name = prompt("Enter Preset Name:", "CUSTOM_01");
+        if (name) {
+          const list = document.getElementById("presetsList");
+          const chip = document.createElement("span");
+          chip.className = "preset-chip";
+          chip.innerText = name.toUpperCase();
+          const snapshot = { ...state };
+          chip.addEventListener("click", () => {
+            Object.assign(state, snapshot);
+            updateWaveformUI();
+            updateFrequency(state.frequency);
+            updateAmplitude(state.amplitude);
+            updateOffset(state.offset);
+            sendFullConfiguration();
+            showToast(`Loaded custom preset: ${name}`);
+            haptics.thump();
+          });
+          list.appendChild(chip);
+          showToast(`Preset "${name}" saved!`);
+        }
+      });
+
+      // Start Engines
+      updateFrequency(1000);
+      updateAmplitude(100);
+      updateOffset(0);
+      updateWaveformUI();
+      updateDacBufferUI();
+      updateEquationPreview();
+      renderOscilloscope();
+      updateGlyphLighting();
+    });
   </script>
 </body>
 </html>

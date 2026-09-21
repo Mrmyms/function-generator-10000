@@ -4,3 +4,6 @@
 build/
 .vscode/
 .idea/
+*.log
+node_modules/
+.vercel
