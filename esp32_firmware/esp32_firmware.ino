@@ -143,14 +143,24 @@ class CommandCallbacks: public BLECharacteristicCallbacks {
 
     totalBleCmdsReceived++;
 
-    uint8_t cmd = rxData[0];
-    const uint8_t* data = (totalLen > 1) ? (rxData + 1) : nullptr;
-    size_t len = (totalLen > 1) ? (totalLen - 1) : 0;
-
-    Serial.printf("[BLE RX -> STM32] Forwarding CMD 0x%02X (Payload: %d bytes)\n", cmd, (int)len);
-
-    // Relay command directly to STM32 via high-speed UART
-    sendPacketToSTM(cmd, data, len);
+    // Check if packet is already fully framed by Web App: [0xAA, 0x55, cmd, len, payload..., crc]
+    if (totalLen >= 5 && rxData[0] == 0xAA && rxData[1] == 0x55) {
+      uint8_t cmd = rxData[2];
+      uint8_t pLen = rxData[3];
+      Serial.printf("[BLE RX -> STM32] Forwarding framed CMD 0x%02X (%d B payload, %d B total)\n",
+                    cmd, pLen, (int)totalLen);
+      // Forward the exact binary packet directly to STM32 over UART2
+      Serial2.write(rxData, totalLen);
+      totalPacketsSentToStm++;
+      ledActivityOffUntil = millis() + 80;
+    } else {
+      // Unframed fallback: [cmd, payload...]
+      uint8_t cmd = rxData[0];
+      const uint8_t* data = (totalLen > 1) ? (rxData + 1) : nullptr;
+      size_t len = (totalLen > 1) ? (totalLen - 1) : 0;
+      Serial.printf("[BLE RX -> STM32] Framing and forwarding CMD 0x%02X (Payload: %d bytes)\n", cmd, (int)len);
+      sendPacketToSTM(cmd, data, len);
+    }
   }
 };
 
@@ -223,8 +233,16 @@ void processStm32Uart() {
   static uint8_t rxLen = 0;
   static uint8_t rxBuf[128];
   static uint8_t rxIdx = 0;
+  static uint32_t lastStmRxByteMs = 0;
+
+  // Watchdog timer: If STM32 packet reception stalled for > 40ms, reset parser
+  if (rxState > 0 && (millis() - lastStmRxByteMs > 40)) {
+    rxState = 0;
+    rxIdx = 0;
+  }
 
   while (Serial2.available()) {
+    lastStmRxByteMs = millis();
     uint8_t b = Serial2.read();
 
     if (rxState == 0) {
@@ -269,7 +287,7 @@ void processStm32Uart() {
             stm32HwId = rxBuf[2];
           }
           if (rxLen >= 4) {
-            stm32Flags = rxBuf[3];
+            stm32Flags = rxBuf[3]; // Real-time sampling health byte
           }
           if (rxLen >= 5) {
             stm32FwVersion = rxBuf[4];
@@ -280,14 +298,40 @@ void processStm32Uart() {
         // -------------------------------------------------------------
         else if (rxCmd == 0x81) {
           totalAcksReceived++;
-          Serial.println("✔ [STM32 -> ESP32] ACK: Command executed by STM32 silicon!");
+          // Forward rich confirmation to Web App via BLE Notify: [0x81, payload...]
+          if (deviceConnected && pTelemChar != nullptr) {
+            uint8_t bleAck[24];
+            bleAck[0] = 0x81;
+            size_t copyLen = (rxLen < 23) ? rxLen : 23;
+            if (copyLen > 0) {
+              memcpy(&bleAck[1], rxBuf, copyLen);
+            }
+            pTelemChar->setValue(bleAck, copyLen + 1);
+            pTelemChar->notify();
+          }
+          Serial.printf("✔ [STM32 -> ESP32 -> WEB] ACK received for CMD 0x%02X! Health: 0x%02X\n",
+                        (rxLen > 0 ? rxBuf[0] : 0), (rxLen > 1 ? rxBuf[1] : 0));
         }
         // -------------------------------------------------------------
         // CMD 0x82: NACK from STM32 (Syntax or execution error)
         // -------------------------------------------------------------
         else if (rxCmd == 0x82) {
           totalNacksReceived++;
-          Serial.println("✘ [STM32 -> ESP32] NACK: STM32 rejected command / formula!");
+          if (deviceConnected && pTelemChar != nullptr) {
+            uint8_t bleNack[8];
+            bleNack[0] = 0x82;
+            size_t copyLen = (rxLen < 7) ? rxLen : 7;
+            if (copyLen > 0) {
+              memcpy(&bleNack[1], rxBuf, copyLen);
+            } else {
+              bleNack[1] = 0x00;
+              copyLen = 1;
+            }
+            pTelemChar->setValue(bleNack, copyLen + 1);
+            pTelemChar->notify();
+          }
+          Serial.printf("✘ [STM32 -> ESP32 -> WEB] NACK received for CMD 0x%02X!\n",
+                        (rxLen > 0 ? rxBuf[0] : 0));
         }
       } else {
         totalCrcErrors++;
@@ -337,6 +381,36 @@ void processUsbCli() {
         minRttUs = 999999;
         maxRttUs = 0;
         Serial.println("RTT statistics reset.");
+      } else if (strncmp(cmdLine, "set freq ", 9) == 0) {
+        float f = strtof(cmdLine + 9, nullptr);
+        if (f >= 1.0f && f <= 500000.0f) {
+          uint8_t payload[9];
+          payload[0] = 's';
+          memcpy(&payload[1], &f, 4);
+          payload[5] = 100;
+          payload[6] = 0;
+          payload[7] = 1;
+          payload[8] = 50;
+          Serial.printf("Sending CMD 0x01 (Freq: %.2f Hz) to STM32...\n", f);
+          sendPacketToSTM(0x01, payload, sizeof(payload));
+        }
+      } else if (strncmp(cmdLine, "set wave ", 9) == 0) {
+        char w = cmdLine[9];
+        float f = 1000.0f;
+        uint8_t payload[9];
+        payload[0] = (uint8_t)w;
+        memcpy(&payload[1], &f, 4);
+        payload[5] = 100;
+        payload[6] = 0;
+        payload[7] = 1;
+        payload[8] = 50;
+        Serial.printf("Sending CMD 0x01 (Wave: '%c') to STM32...\n", w);
+        sendPacketToSTM(0x01, payload, sizeof(payload));
+      } else if (strncmp(cmdLine, "set buf ", 8) == 0) {
+        bool on = (strcmp(cmdLine + 8, "on") == 0);
+        uint8_t payload[1] = { (uint8_t)(on ? 1 : 0) };
+        Serial.printf("Sending CMD 0x07 (DAC Buffer: %s) to STM32...\n", on ? "ON" : "OFF");
+        sendPacketToSTM(0x07, payload, sizeof(payload));
       } else {
         Serial.println("Unknown command. Type 'help' for available commands.");
       }
@@ -424,5 +498,6 @@ void loop() {
     }
   }
 
-  delay(5);
+  // Non-blocking yield for FreeRTOS background tasks (BLE radio stack)
+  yield();
 }

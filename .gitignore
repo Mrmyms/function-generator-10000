@@ -2,6 +2,11 @@
 *.swp
 *~
 build/
+build_stm32/
+*.bin
+*.hex
+*.elf
+*.map
 .vscode/
 .idea/
 *.log
