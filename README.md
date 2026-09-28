@@ -1,11 +1,11 @@
-# ⚡ FUNCTION GENERATOR 10000 (FG-10000)
+# FUNCTION GENERATOR 10000 (FG-10000)
 
 > **Commercial Laboratory-Grade Arbitrary Function & Signal Generator**  
 > Powered by **STM32 ARM Cortex-M33 @ 250 MHz** (GPDMA 12-bit DAC Engine up to **2.049 MSPS**) + **ESP32 BLE GATT Gateway** + **Nothing OS Aesthetic Web App**.
 
 ---
 
-## 🚀 Overview
+## Overview
 
 The **Function Generator 10000** is an open-architecture, high-precision arbitrary waveform generator designed for laboratory experiments, audio engineering, RF synthesis, and hardware debugging. It couples an ultra-fast hardware direct memory access (GPDMA) DAC core on an STM32 with a wireless Bluetooth Low Energy (BLE) gateway and a futuristic web interface inspired by the Nothing OS design language.
 
@@ -26,7 +26,7 @@ The **Function Generator 10000** is an open-architecture, high-precision arbitra
 
 ---
 
-## 🏗️ System Architecture
+## System Architecture
 
 ```
 +-------------------------------------------------------------+
@@ -65,7 +65,7 @@ The **Function Generator 10000** is an open-architecture, high-precision arbitra
 
 ---
 
-## 🔌 Hardware Pinout & Wiring
+## Hardware Pinout & Wiring
 
 ### 1. Inter-Board Communication (ESP32 <-> STM32)
 
@@ -87,7 +87,7 @@ The **Function Generator 10000** is an open-architecture, high-precision arbitra
 
 ---
 
-## 📁 Repository Structure
+## Repository Structure
 
 ```
 function-generator-10000/
@@ -112,7 +112,7 @@ function-generator-10000/
 
 ---
 
-## 💻 Quick Start Guide
+## Quick Start Guide
 
 ### 1. Flashing the ESP32
 **macOS / Linux:**
@@ -150,5 +150,5 @@ Open `http://localhost:8088/` in Google Chrome, Brave, or Microsoft Edge, click 
 
 ---
 
-## 📜 License
+## License
 MIT License. Built for precision audio, RF synthesis, and modern lab automation.

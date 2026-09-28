@@ -373,13 +373,10 @@
     /* Middle Row: Parameter Bento Controls */
     .params-grid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(3, 1fr);
       gap: 20px;
     }
-    @media (max-width: 1200px) {
-      .params-grid { grid-template-columns: repeat(2, 1fr); }
-    }
-    @media (max-width: 680px) {
+    @media (max-width: 980px) {
       .params-grid { grid-template-columns: 1fr; }
     }
 
@@ -491,61 +488,6 @@
       color: #000000;
       font-weight: 700;
       border-color: #ffffff;
-    }
-
-    /* DAC Buffer Mode Card */
-    .buffer-mode-card {
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-    }
-    .buffer-switch-group {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      width: 100%;
-      margin-top: 10px;
-    }
-    .buffer-option-btn {
-      background: var(--card-subtle);
-      border: 1px solid var(--card-border);
-      border-radius: var(--radius-md);
-      padding: 12px 14px;
-      text-align: left;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .buffer-option-btn:hover {
-      border-color: var(--card-border-hover);
-    }
-    .buffer-option-btn.active {
-      background: rgba(255, 255, 255, 0.08);
-      border-color: var(--white);
-    }
-    .buffer-opt-title {
-      font-family: var(--font-ndot);
-      font-size: 12px;
-      color: var(--white);
-      letter-spacing: 1px;
-    }
-    .buffer-opt-desc {
-      font-family: var(--font-mono);
-      font-size: 10px;
-      color: var(--text-muted);
-      margin-top: 3px;
-    }
-    .buffer-indicator-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #252525;
-    }
-    .buffer-option-btn.active .buffer-indicator-dot {
-      background: var(--red);
-      box-shadow: 0 0 8px var(--red);
     }
 
     /* Lower Grid: Equation Lab + AWG Touch Pad + Telemetry & Presets */
@@ -908,11 +850,11 @@
           <span class="wave-name">NOISE</span>
         </div>
         <div class="wave-pill-btn" data-wave="h">
-          <span class="wave-symbol">⚡</span>
+          <span class="wave-symbol">RN</span>
           <span class="wave-name">LFSR</span>
         </div>
         <div class="wave-pill-btn" data-wave="c">
-          <span class="wave-symbol">✏️</span>
+          <span class="wave-symbol">AWG</span>
           <span class="wave-name">CUSTOM</span>
         </div>
         <div class="wave-pill-btn" data-wave="e">
@@ -984,31 +926,6 @@
           <button class="decade-btn" data-off="-64">-0.8V</button>
           <button class="decade-btn active" data-off="0">0.0V</button>
           <button class="decade-btn" data-off="64">+0.8V</button>
-        </div>
-      </div>
-
-      <!-- DAC Output Buffer Mode Switch Module -->
-      <div class="param-card buffer-mode-card">
-        <div class="param-header">
-          <span class="param-label">DAC BUFFER</span>
-        </div>
-
-        <div class="buffer-switch-group">
-          <div class="buffer-option-btn active" id="btnBufOn">
-            <div>
-              <div class="buffer-opt-title">BUFFER ON</div>
-              <div class="buffer-opt-desc">Internal Follower (~0.2V - 3.1V)</div>
-            </div>
-            <div class="buffer-indicator-dot"></div>
-          </div>
-
-          <div class="buffer-option-btn" id="btnBufOff">
-            <div>
-              <div class="buffer-opt-title">BUFFER OFF</div>
-              <div class="buffer-opt-desc">Direct Rail-to-Rail (0.0V - 3.3V)</div>
-            </div>
-            <div class="buffer-indicator-dot"></div>
-          </div>
         </div>
       </div>
     </section>
@@ -1376,18 +1293,18 @@
 
             const waveNames = { 's': 'SINE', 'q': 'SQUARE', 't': 'TRIANGLE', 'a': 'SAWTOOTH', 'n': 'NOISE', 'c': 'AWG', 'e': 'EQUATION' };
             const waveTitle = waveNames[waveChar.toLowerCase()] || waveChar.toUpperCase();
-            showToast(`✔ CONFIRMED: ${waveTitle} @ ${actFreq.toLocaleString()} Hz // DMA Active`);
+            showToast(`CONFIRMED: ${waveTitle} @ ${actFreq.toLocaleString()} Hz // DMA Active`);
           } else {
-            showToast(`✔ CONFIRMED: Parameter updated by STM32`);
+            showToast(`CONFIRMED: Parameter updated by STM32`);
           }
         } else if (ackedCmd === 0x07) {
           const bufMode = v.getUint8(2) !== 0;
-          showToast(`✔ CONFIRMED: DAC Buffer ${bufMode ? 'ENABLED (Mode 0)' : 'DISABLED (Mode 2)'}`);
+          showToast(`CONFIRMED: DAC Buffer ${bufMode ? 'ENABLED (Mode 0)' : 'DISABLED (Mode 2)'}`);
         } else if (ackedCmd >= 0x10 && ackedCmd <= 0x13) {
           const chunk = v.getUint8(2);
-          showToast(`✔ CONFIRMED: AWG Block ${chunk + 1}/4 Verified`);
+          showToast(`CONFIRMED: AWG Block ${chunk + 1}/4 Verified`);
         } else {
-          showToast(`✔ CONFIRMED: Command 0x${ackedCmd.toString(16).toUpperCase()} executed by STM32`);
+          showToast(`CONFIRMED: Command 0x${ackedCmd.toString(16).toUpperCase()} executed by STM32`);
         }
         haptics.tick();
       }
@@ -1399,7 +1316,7 @@
         if (reason === 0xEE) reasonStr = "CRC Checksum Error";
         else if (reason === 0x01) reasonStr = "Formula Syntax Error";
         else if (reason === 0xFF) reasonStr = "Unknown Command";
-        showToast(`✘ STM32 NACK: CMD 0x${rejectedCmd.toString(16).toUpperCase()} (${reasonStr})`);
+        showToast(`STM32 NACK: CMD 0x${rejectedCmd.toString(16).toUpperCase()} (${reasonStr})`);
         haptics.thump();
       }
     }
@@ -1591,15 +1508,7 @@
     }
 
     function updateDacBufferUI() {
-      const btnOn = document.getElementById("btnBufOn");
-      const btnOff = document.getElementById("btnBufOff");
-      if (state.dacBufferEnabled) {
-        btnOn.classList.add("active");
-        btnOff.classList.remove("active");
-      } else {
-        btnOn.classList.remove("active");
-        btnOff.classList.add("active");
-      }
+      // Buffer mode card removed
     }
 
     function updateWaveformUI() {
@@ -1903,15 +1812,7 @@
         });
       });
 
-      // DAC Buffer Mode Buttons
-      document.getElementById("btnBufOn").addEventListener("click", () => {
-        sendDacBufferToggle(true);
-        haptics.click();
-      });
-      document.getElementById("btnBufOff").addEventListener("click", () => {
-        sendDacBufferToggle(false);
-        haptics.click();
-      });
+
 
       // Equation Inputs & Compile
       const inputEqn = document.getElementById("inputEquation");

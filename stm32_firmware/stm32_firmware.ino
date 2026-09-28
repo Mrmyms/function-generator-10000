@@ -740,10 +740,10 @@ void processUsbCli(void) {
         Serial.println("------------------------------------------------------\n");
       } else if (strcmp(cmdLine, "buf on") == 0 || strcmp(cmdLine, "buffer on") == 0) {
         applyDacBufferMode(true);
-        Serial.println("✔ DAC Output Buffer: ENABLED (Mode 0: drive load down to 5k, swing ~0.2V to 3.1V)");
+        Serial.println("[OK] DAC Output Buffer: ENABLED (Mode 0: drive load down to 5k, swing ~0.2V to 3.1V)");
       } else if (strcmp(cmdLine, "buf off") == 0 || strcmp(cmdLine, "buffer off") == 0) {
         applyDacBufferMode(false);
-        Serial.println("✔ DAC Output Buffer: DISABLED (Mode 2: true 0.0V-3.3V rail-to-rail, ideal for external op-amp)");
+        Serial.println("[OK] DAC Output Buffer: DISABLED (Mode 2: true 0.0V-3.3V rail-to-rail, ideal for external op-amp)");
       } else if (strncmp(cmdLine, "eqn ", 4) == 0) {
         const char *formula = cmdLine + 4;
         if (strncmp(formula, "1 ", 2) == 0) formula += 2;
@@ -751,44 +751,44 @@ void processUsbCli(void) {
         if (compileMathExpression(formula, &ch1.mathExpr)) {
           ch1.wave = 'e';
           recomputeAndApplySynthesis();
-          Serial.print("✔ Equation compiled: \""); Serial.print(formula); Serial.print("\" (Bytecode: "); Serial.print(ch1.mathExpr.bcLen); Serial.print(" B, NormScale: "); Serial.print(ch1.mathExpr.normScale, 3); Serial.println(")");
+          Serial.print("[OK] Equation compiled: \""); Serial.print(formula); Serial.print("\" (Bytecode: "); Serial.print(ch1.mathExpr.bcLen); Serial.print(" B, NormScale: "); Serial.print(ch1.mathExpr.normScale, 3); Serial.println(")");
           Serial.print("  Synthesized with N="); Serial.print(currentSamplesPerCycle); Serial.print(" points in "); Serial.print(lastComputeTimeUs, 1); Serial.print(" us ("); Serial.print((unsigned long)lastComputeCycles); Serial.println(" cycles)!");
         } else {
-          Serial.print("✘ Syntax error in equation: "); Serial.println(formula);
+          Serial.print("[ERROR] Syntax error in equation: "); Serial.println(formula);
         }
       } else if (strncmp(cmdLine, "wave ", 5) == 0) {
         char w = cmdLine[5];
         ch1.wave = w;
         recomputeAndApplySynthesis();
-        Serial.print("✔ Waveform set to: '"); Serial.print(w); Serial.println("'");
+        Serial.print("[OK] Waveform set to: '"); Serial.print(w); Serial.println("'");
       } else if (strncmp(cmdLine, "freq ", 5) == 0) {
         float f = strtof(cmdLine + 5, nullptr);
         if (f >= 1.0f && f <= 500000.0f) {
           ch1.freq = f;
           recomputeAndApplySynthesis();
-          Serial.print("✔ Target: "); Serial.print(f, 2); Serial.print(" Hz | Actual: "); Serial.print((float)actualFout, 2); Serial.print(" Hz (Error: "); Serial.print(freqErrorPct, 3); Serial.print("%) | fs: "); Serial.print((float)(actualFs / 1000000.0), 3); Serial.print(" MSPS (N="); Serial.print(currentSamplesPerCycle); Serial.println(")");
+          Serial.print("[OK] Target: "); Serial.print(f, 2); Serial.print(" Hz | Actual: "); Serial.print((float)actualFout, 2); Serial.print(" Hz (Error: "); Serial.print(freqErrorPct, 3); Serial.print("%) | fs: "); Serial.print((float)(actualFs / 1000000.0), 3); Serial.print(" MSPS (N="); Serial.print(currentSamplesPerCycle); Serial.println(")");
         }
       } else if (strncmp(cmdLine, "amp ", 4) == 0) {
         int a = atoi(cmdLine + 4);
         ch1.amp = constrain(a, 0, 100);
         recomputeAndApplySynthesis();
-        Serial.print("✔ Amplitude set to: "); Serial.print(ch1.amp); Serial.println("%");
+        Serial.print("[OK] Amplitude set to: "); Serial.print(ch1.amp); Serial.println("%");
       } else if (strncmp(cmdLine, "offset ", 7) == 0) {
         int o = atoi(cmdLine + 7);
         ch1.offset = constrain(o, -128, 127);
         recomputeAndApplySynthesis();
-        Serial.print("✔ Offset set to: "); Serial.println(ch1.offset);
+        Serial.print("[OK] Offset set to: "); Serial.println(ch1.offset);
       } else if (strncmp(cmdLine, "duty ", 5) == 0) {
         int d = atoi(cmdLine + 5);
         ch1.duty = constrain(d, 1, 99);
         recomputeAndApplySynthesis();
-        Serial.print("✔ Duty cycle set to: "); Serial.print(ch1.duty); Serial.println("%");
+        Serial.print("[OK] Duty cycle set to: "); Serial.print(ch1.duty); Serial.println("%");
       } else if (strncmp(cmdLine, "ch1 ", 4) == 0) {
         char w; uint32_t f; int a;
         if (sscanf(cmdLine + 4, " %c %lu %d", &w, &f, &a) == 3) {
           ch1.wave = w; ch1.freq = (float)f; ch1.amp = constrain(a, 0, 100); ch1.enabled = true;
           recomputeAndApplySynthesis();
-          Serial.print("✔ CH1: Wave="); Serial.print(w); Serial.print(", Freq="); Serial.print(f); Serial.print(" Hz, Amp="); Serial.print(a); Serial.print("% | Actual="); Serial.print((float)actualFout, 2); Serial.print(" Hz, N="); Serial.print(currentSamplesPerCycle); Serial.println(" pts");
+          Serial.print("[OK] CH1: Wave="); Serial.print(w); Serial.print(", Freq="); Serial.print(f); Serial.print(" Hz, Amp="); Serial.print(a); Serial.print("% | Actual="); Serial.print((float)actualFout, 2); Serial.print(" Hz, N="); Serial.print(currentSamplesPerCycle); Serial.println(" pts");
         }
       } else if (strcmp(cmdLine, "mute") == 0 || strcmp(cmdLine, "mute 1") == 0) {
         ch1.enabled = false; recomputeAndApplySynthesis(); Serial.println("DAC Output Muted (DC Midpoint)");

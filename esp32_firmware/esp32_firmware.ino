@@ -220,8 +220,8 @@ void setup() {
   pAdvertising->setMinPreferred(0x12);
   BLEDevice::startAdvertising();
 
-  Serial.println("✔ BLE Advertising ACTIVE as 'FuncGen-10000'");
-  Serial.println("✔ Waiting for Web App to pair via Web Bluetooth...");
+  Serial.println("[OK] BLE Advertising ACTIVE as 'FuncGen-10000'");
+  Serial.println("[OK] Waiting for Web App to pair via Web Bluetooth...");
   Serial.println("===========================================================\n");
   Serial.flush();
 }
@@ -309,7 +309,7 @@ void processStm32Uart() {
             pTelemChar->setValue(bleAck, copyLen + 1);
             pTelemChar->notify();
           }
-          Serial.printf("✔ [STM32 -> ESP32 -> WEB] ACK received for CMD 0x%02X! Health: 0x%02X\n",
+          Serial.printf("[OK] [STM32 -> ESP32 -> WEB] ACK received for CMD 0x%02X! Health: 0x%02X\n",
                         (rxLen > 0 ? rxBuf[0] : 0), (rxLen > 1 ? rxBuf[1] : 0));
         }
         // -------------------------------------------------------------
@@ -330,12 +330,12 @@ void processStm32Uart() {
             pTelemChar->setValue(bleNack, copyLen + 1);
             pTelemChar->notify();
           }
-          Serial.printf("✘ [STM32 -> ESP32 -> WEB] NACK received for CMD 0x%02X!\n",
+          Serial.printf("[ERROR] [STM32 -> ESP32 -> WEB] NACK received for CMD 0x%02X!\n",
                         (rxLen > 0 ? rxBuf[0] : 0));
         }
       } else {
         totalCrcErrors++;
-        Serial.printf("⚠️ [STM32 UART] CRC Error! Expected 0x%02X, Calculated 0x%02X\n", expectedCrc, calculatedCrc);
+        Serial.printf("[WARN] [STM32 UART] CRC Error! Expected 0x%02X, Calculated 0x%02X\n", expectedCrc, calculatedCrc);
       }
     }
   }
