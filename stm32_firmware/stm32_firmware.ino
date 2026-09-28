@@ -358,18 +358,29 @@ extern "C" void assert_failed(uint8_t* file, uint32_t line) {
 
 // --- SETUP HARDWARE ---
 void setup() {
-  // 1. Initialize Serial first
+  // 1. Initialize Serial on actual NUCLEO-H503RB ST-Link VCP pins (PA3 RX / PA2 TX)
+  // This completely frees PA4 from USART3 Alternate Function contention!
+  Serial.setRx((PinName)PA_3);
+  Serial.setTx((PinName)PA_2);
   Serial.begin(115200);
   delay(100);
+
+  // 2. Configure PA4 (DAC1_OUT1) and PA5 (DAC1_OUT2 / D13) in true GPIO Analog Mode
+  __HAL_RCC_GPIOA_CLK_ENABLE();
+  GPIO_InitTypeDef gpioDac = {0};
+  gpioDac.Pin = GPIO_PIN_4 | GPIO_PIN_5;
+  gpioDac.Mode = GPIO_MODE_ANALOG;
+  gpioDac.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOA, &gpioDac);
 
   Serial.println("\n===========================================================");
   Serial.println("   FUNCTION GENERATOR 10000 - STM32H503 SILICON FIRMWARE   ");
   Serial.println("   250 MHz Cortex-M33 Hardware FPU | Autonomous GPDMA DAC  ");
-  Serial.println("   Simultaneous Output: PA4 & Arduino Header Pin D13 (PA5) ");
+  Serial.println("   Clean Isolated DAC Out: PA4 (CN7 Pin 32) & D13 (PA5)    ");
   Serial.println("   Formula Parser & 2048-Point Arbitrary Waveform Engine   ");
   Serial.println("===========================================================");
-  Serial.println(" Signal Out:    Arduino Header Pin D13 (PA5 / LD2) & PA4");
-  Serial.println(" (Probe Arduino Pin D13 for easy access!)");
+  Serial.println(" Clean Analog Out: Morpho PA4 (CN7 Pin 32 / Arduino A2)");
+  Serial.println(" Auxiliary Probe:  Arduino Header Pin D13 (PA5 / LD2)");
 
   // 3. Serial1 connected to ESP32 Gateway (D0 PB15 / D1 PB14)
   Serial1.begin(115200);

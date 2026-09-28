@@ -1405,6 +1405,23 @@
     }
 
     // --- PROTOCOL PACKET BUILDERS ---
+    let configThrottleTimer = null;
+    let configPending = false;
+    function queueFullConfiguration(delayMs = 35) {
+      if (!configThrottleTimer) {
+        sendFullConfiguration();
+        configThrottleTimer = setTimeout(() => {
+          configThrottleTimer = null;
+          if (configPending) {
+            configPending = false;
+            sendFullConfiguration();
+          }
+        }, delayMs);
+      } else {
+        configPending = true;
+      }
+    }
+
     function sendFullConfiguration() {
       // 29-byte ChannelPacket
       const buf = new ArrayBuffer(29);
@@ -1542,7 +1559,7 @@
         }
       });
 
-      sendFullConfiguration();
+      queueFullConfiguration();
     }
 
     function updateAmplitude(newAmp) {
@@ -1553,7 +1570,7 @@
       document.getElementById("dispAmpVal").innerText = `${state.amplitude}%`;
       document.getElementById("dispAmpSub").innerText = `${vpp} Vpp // ${vrms} Vrms`;
 
-      sendFullConfiguration();
+      queueFullConfiguration();
     }
 
     function updateOffset(newOffset) {
@@ -1562,7 +1579,7 @@
       document.getElementById("dispOffsetVal").innerText = `${v >= 0 ? '+' : ''}${v} V`;
       document.getElementById("dispOffsetSub").innerText = `BIAS: ${(1.65 + parseFloat(v)).toFixed(2)} V (OFFSET ${state.offset})`;
 
-      sendFullConfiguration();
+      queueFullConfiguration();
     }
 
     function updateDuty(newDuty) {
@@ -1570,7 +1587,7 @@
       document.getElementById("dispOffsetVal").innerText = `${state.dutyCycle}%`;
       document.getElementById("dispOffsetSub").innerText = `PULSE HIGH: ${state.dutyCycle}% // LOW: ${100 - state.dutyCycle}%`;
 
-      sendFullConfiguration();
+      queueFullConfiguration();
     }
 
     function updateDacBufferUI() {

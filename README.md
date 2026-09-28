@@ -94,15 +94,19 @@ function-generator-10000/
 ├── esp32_firmware/
 │   └── esp32_firmware.ino       # ESP32 BLE GATT server & UART transceiver
 ├── stm32_firmware/
-│   └── stm32_firmware.ino       # STM32 250 MHz GPDMA DAC waveform engine
+│   ├── stm32_firmware.ino       # STM32 250 MHz GPDMA DAC waveform engine
+│   ├── math_expr.h              # Real-time bytecode math formula parser
+│   └── waveform_synth.h         # Waveform synthesis definitions
 ├── web_app/
 │   ├── index.html               # Nothing OS single-page web application
 │   ├── package.json             # Deployment metadata
 │   └── vercel.json              # Vercel deployment configuration
-├── flash_esp32.ps1              # Flash script for ESP32 DevKit
-├── upload_esp.ps1               # Automated ESP32 compilation & flash utility
-├── start_web_server.ps1         # Local HTTP dev server launcher
-├── test_binary_packet.ps1       # Protocol packet generator & validator
+├── upload_esp.sh                # macOS/Linux ESP32 compile & flash utility (115200 baud)
+├── upload_stm32.sh              # macOS/Linux direct SWD STM32 flash & verify utility
+├── start_web_server.sh          # macOS/Linux local HTTP dev server launcher
+├── flash_esp32.ps1              # Windows ESP32 flash utility
+├── flash_stm32.ps1              # Windows STM32 flash utility
+├── start_web_server.ps1         # Windows local HTTP dev server launcher
 └── README.md                    # System documentation
 ```
 
@@ -111,24 +115,38 @@ function-generator-10000/
 ## 💻 Quick Start Guide
 
 ### 1. Flashing the ESP32
+**macOS / Linux:**
+```bash
+./upload_esp.sh
+```
+**Windows:**
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\upload_esp.ps1
+powershell -ExecutionPolicy Bypass -File .\flash_esp32.ps1
 ```
 
 ### 2. Flashing the STM32 NUCLEO-H503RB
-Using Arduino IDE or `arduino-cli`:
+**macOS / Linux:**
+```bash
+./upload_stm32.sh
+```
+*(Uses direct SWD flashing via STM32CubeProgrammer CLI or USB Drag-and-Drop).*
+
+**Windows:**
 ```powershell
-arduino-cli compile --fqbn STMicroelectronics:stm32:Nucleo_64:pnum=NUCLEO_H503RB .\stm32_firmware
-arduino-cli upload -p COM7 --fqbn STMicroelectronics:stm32:Nucleo_64:pnum=NUCLEO_H503RB .\stm32_firmware
+powershell -ExecutionPolicy Bypass -File .\flash_stm32.ps1
 ```
 *(Or drop the generated `.bin` file directly onto the `NOD_H503RB` USB drive).*
 
 ### 3. Running the Web App
-Start the local server or deploy directly to Vercel:
+**macOS / Linux:**
+```bash
+./start_web_server.sh
+```
+**Windows:**
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\start_web_server.ps1
 ```
-Open `http://localhost:8088/` in Google Chrome or Microsoft Edge, click **"CONNECT GENERATOR"**, pair with **`FuncGen-10000`**, and probe **Pin D13** on your oscilloscope!
+Open `http://localhost:8088/` in Google Chrome, Brave, or Microsoft Edge, click **"CONNECT GENERATOR"**, pair with **`FuncGen-10000`**, and probe **Pin D13** or **PA4** on your oscilloscope!
 
 ---
 
