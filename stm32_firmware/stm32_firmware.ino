@@ -65,6 +65,12 @@ static float    freqErrorPct = 0.058f;
 static bool     dacBufferEnabled = true;
 static const char *clockSourceStr = "Unknown";
 
+// --- SYNTHESIS ENGINE CONFIGURATION ---
+// Option: Fixed 1.000 MSPS DDS (true) vs Dynamic ARR/PSC Timer Slicing (false)
+static bool ddsModeEnabled = false; // Toggleable option: true = 1 MSPS Fixed DDS, false = Dynamic fs
+static volatile uint32_t ddsPhase = 0;
+static volatile uint32_t ddsPhaseInc = 0;
+
 // GPDMA Linked List structures
 static DMA_HandleTypeDef hdma_dac;
 static DMA_NodeTypeDef   dmaNode __attribute__((aligned(32)));
@@ -267,77 +273,146 @@ void synthesizeBufferWithKCycles(const ChannelState &cfg, uint16_t k, uint32_t *
   }
 }
 
-// --- APPLY SYNTHESIS TO HARDWARE REGISTERS (ZERO-GLITCH DOUBLE BUFFER) ---
+// --- DDS REAL-TIME PHASE ACCUMULATOR SYNTHESIS (FIXED 1.000 MSPS MODE) ---
+void fillDdsHalfBuffer(uint8_t half) {
+  uint32_t *dest = (half == 0) ? (uint32_t*)&activeBuffer[0] : (uint32_t*)&activeBuffer[1024];
+  uint32_t phase = ddsPhase;
+  const uint32_t inc = ddsPhaseInc;
+  const uint32_t *lut = (const uint32_t*)inactiveBuffer;
+
+  if (!ch1.enabled || ch1.amp == 0) {
+    const uint32_t dc = (2048UL << 16) | 2048UL;
+    for (int i = 0; i < 1024; i++) {
+      dest[i] = dc;
+    }
+    ddsPhase = phase + inc * 1024;
+    return;
+  }
+
+  for (int i = 0; i < 1024; i++) {
+    phase += inc;
+    dest[i] = lut[(phase >> 21) & 0x7FF];
+  }
+  ddsPhase = phase;
+}
+
+// GPDMA1 Channel 0 Hardware Interrupt Handler (Servicing HT and TC in DDS Mode)
+extern "C" void GPDMA1_Channel0_IRQHandler(void) {
+  uint32_t csr = GPDMA1_Channel0->CSR;
+  if (csr & DMA_CSR_HTF) {
+    GPDMA1_Channel0->CFCR = DMA_CFCR_HTF; // Clear Half-Transfer Flag
+    if (ddsModeEnabled) {
+      fillDdsHalfBuffer(0); // Half 0 completed playback, refill Half 0
+    }
+  }
+  if (csr & DMA_CSR_TCF) {
+    GPDMA1_Channel0->CFCR = DMA_CFCR_TCF; // Clear Transfer-Complete Flag
+    if (ddsModeEnabled) {
+      fillDdsHalfBuffer(1); // Half 1 completed playback, refill Half 1
+    }
+  }
+}
+
+// --- APPLY SYNTHESIS TO HARDWARE REGISTERS (ZERO-GLITCH DUAL ENGINE) ---
 void recomputeAndApplySynthesis(void) {
   float refFreq = ch1.freq;
   if (refFreq < 1.0f) refFreq = 1.0f;
 
-  // 1. Solve optimal (K, ARR, PSC) to achieve laboratory-grade frequency accuracy (<0.01% error)
-  double timClk = (double)SystemCoreClock; // 250 MHz
-  double minErr = 1e9;
-  uint16_t bestK = 1;
-  uint32_t bestArr = 1;
-  uint32_t bestPsc = 0;
-  double bestFs = 0;
-  double bestFout = (double)refFreq;
+  if (ddsModeEnabled) {
+    // =========================================================================
+    // OPTION B: FIXED 1.000 MSPS DDS MODE (PHASE ACCUMULATOR SYNTHESIS)
+    // =========================================================================
+    // 1. Lock TIM6 permanently to exactly 1.000000 MSPS (250 MHz / 250 = 1.000000 MHz)
+    LL_TIM_SetPrescaler(TIM6, 0);
+    LL_TIM_SetAutoReload(TIM6, 249);
 
-  uint16_t maxK = 128;
-  if (refFreq <= 2000.0f)       maxK = 16;
-  else if (refFreq <= 10000.0f) maxK = 32;
-  else if (refFreq <= 50000.0f) maxK = 64;
+    // 2. Synthesize 1 complete cycle (2048 samples) into inactiveBuffer as our wavetable
+    uint32_t tStart = micros();
+    synthesizeBufferWithKCycles(ch1, 1, (uint32_t*)inactiveBuffer);
+    uint32_t tElapsed = micros() - tStart;
+    lastComputeTimeUs = (float)tElapsed;
+    lastComputeCycles = tElapsed * 250;
 
-  for (uint16_t k = 1; k <= maxK; k++) {
-    double fsTarget = (double)refFreq * (double)DMA_BUFFER_SAMPLES / (double)k;
-    if (fsTarget > 3500000.0 && refFreq > 2000.0f) continue;
-    if (fsTarget < 50000.0 && refFreq > 100.0f) continue;
+    // 3. 32-bit Phase Increment: inc = (f / 1,000,000) * 2^32
+    ddsPhaseInc = (uint32_t)round(((double)refFreq / 1000000.0) * 4294967296.0);
 
-    double div = timClk / fsTarget;
-    uint32_t psc = 0;
-    uint32_t arr = (uint32_t)round(div) - 1;
-    if (arr > 65535) {
-      psc = (uint32_t)(div / 65535.0);
-      arr = (uint32_t)round(div / (double)(psc + 1)) - 1;
+    // 4. Update discrete telemetry
+    actualFs = 1000000.0;
+    actualFout = (double)ddsPhaseInc * 1000000.0 / 4294967296.0;
+    freqErrorPct = (float)(fabs(actualFout - (double)refFreq) / (double)refFreq * 100.0);
+    currentSamplesPerCycle = (refFreq >= 1.0f) ? (uint16_t)constrain((int)round(1000000.0f / refFreq), 1, 65535) : 2048;
+    currentRepetitions = 1;
+
+    // Pre-fill both halves of activeBuffer so DAC output updates immediately
+    fillDdsHalfBuffer(0);
+    fillDdsHalfBuffer(1);
+  } else {
+    // =========================================================================
+    // OPTION A: DYNAMIC FS / HARDWARE TIMER SLICING MODE
+    // =========================================================================
+    double timClk = (double)SystemCoreClock; // 250 MHz
+    double minErr = 1e9;
+    uint16_t bestK = 1;
+    uint32_t bestArr = 1;
+    uint32_t bestPsc = 0;
+    double bestFs = 0;
+    double bestFout = (double)refFreq;
+
+    uint16_t maxK = 128;
+    if (refFreq <= 2000.0f)       maxK = 16;
+    else if (refFreq <= 10000.0f) maxK = 32;
+    else if (refFreq <= 50000.0f) maxK = 64;
+
+    for (uint16_t k = 1; k <= maxK; k++) {
+      double fsTarget = (double)refFreq * (double)DMA_BUFFER_SAMPLES / (double)k;
+      if (fsTarget > 3500000.0 && refFreq > 2000.0f) continue;
+      if (fsTarget < 50000.0 && refFreq > 100.0f) continue;
+
+      double div = timClk / fsTarget;
+      uint32_t psc = 0;
+      uint32_t arr = (uint32_t)round(div) - 1;
+      if (arr > 65535) {
+        psc = (uint32_t)(div / 65535.0);
+        arr = (uint32_t)round(div / (double)(psc + 1)) - 1;
+      }
+      if (arr < 1) arr = 1;
+
+      double actFs = timClk / ((double)(psc + 1) * (double)(arr + 1));
+      double actFout = (actFs * (double)k) / (double)DMA_BUFFER_SAMPLES;
+      double err = fabs(actFout - (double)refFreq) / (double)refFreq * 100.0;
+
+      if (err < minErr) {
+        minErr = err;
+        bestK = k;
+        bestArr = arr;
+        bestPsc = psc;
+        bestFs = actFs;
+        bestFout = actFout;
+      }
     }
-    if (arr < 1) arr = 1;
 
-    double actFs = timClk / ((double)(psc + 1) * (double)(arr + 1));
-    double actFout = (actFs * (double)k) / (double)DMA_BUFFER_SAMPLES;
-    double err = fabs(actFout - (double)refFreq) / (double)refFreq * 100.0;
+    currentSamplesPerCycle = DMA_BUFFER_SAMPLES / bestK;
+    currentRepetitions = bestK;
 
-    if (err < minErr) {
-      minErr = err;
-      bestK = k;
-      bestArr = arr;
-      bestPsc = psc;
-      bestFs = actFs;
-      bestFout = actFout;
-    }
+    // 2. Measure exact synthesis duration using micros()
+    uint32_t tStart = micros();
+    synthesizeBufferWithKCycles(ch1, bestK, (uint32_t*)inactiveBuffer);
+    uint32_t tElapsed = micros() - tStart;
+    lastComputeTimeUs = (float)tElapsed;
+    lastComputeCycles = tElapsed * 250;
+
+    // 3. Seamless atomic buffer copy (TIM6 and DMA NEVER stop!)
+    memcpy((void*)activeBuffer, (void*)inactiveBuffer, DMA_BUFFER_SAMPLES * sizeof(uint32_t));
+
+    // 4. Update discrete telemetry variables
+    actualFs = bestFs;
+    actualFout = bestFout;
+    freqErrorPct = (float)minErr;
+
+    // 5. Update TIM6 Prescaler and ARR dynamically
+    LL_TIM_SetPrescaler(TIM6, bestPsc);
+    LL_TIM_SetAutoReload(TIM6, bestArr);
   }
-
-  currentSamplesPerCycle = DMA_BUFFER_SAMPLES / bestK;
-  currentRepetitions = bestK;
-
-  // 2. Measure exact synthesis duration using micros()
-  uint32_t tStart = micros();
-
-  // Synthesize complete 2048-sample waveform directly into inactiveBuffer
-  synthesizeBufferWithKCycles(ch1, bestK, (uint32_t*)inactiveBuffer);
-
-  uint32_t tElapsed = micros() - tStart;
-  lastComputeTimeUs = (float)tElapsed;
-  lastComputeCycles = tElapsed * 250;
-
-  // 3. Seamless atomic buffer copy (TIM6 and DMA NEVER stop!)
-  memcpy((void*)activeBuffer, (void*)inactiveBuffer, DMA_BUFFER_SAMPLES * sizeof(uint32_t));
-
-  // 4. Update discrete telemetry variables
-  actualFs = bestFs;
-  actualFout = bestFout;
-  freqErrorPct = (float)minErr;
-
-  // 5. Update TIM6 Prescaler and ARR dynamically (TIM6 is NEVER disabled)
-  LL_TIM_SetPrescaler(TIM6, bestPsc);
-  LL_TIM_SetAutoReload(TIM6, bestArr);
 
   // 6. Handle hardware silicon noise mode ('h')
   if (ch1.wave == 'h') {
@@ -442,6 +517,11 @@ void setup() {
   HAL_DMAEx_List_Init(&hdma_dac);
   HAL_DMAEx_List_LinkQ(&hdma_dac, &dmaQueue);
   HAL_DMAEx_List_Start(&hdma_dac);
+
+  // Enable GPDMA1 Channel 0 Half-Transfer and Transfer-Complete interrupts
+  GPDMA1_Channel0->CCR |= (DMA_CCR_HTIE | DMA_CCR_TCIE);
+  NVIC_SetPriority(GPDMA1_Channel0_IRQn, 1);
+  NVIC_EnableIRQ(GPDMA1_Channel0_IRQn);
 
   // 9. Configure DAC1 Channels 1 & 2 (Buffer ON by default, Mode 0)
   applyDacBufferMode(dacBufferEnabled);
@@ -587,6 +667,17 @@ void executeCommandPacket(Stream &replyStream, uint8_t rxCmd, uint8_t rxLen, uin
       Serial.println(enableBuf ? "ENABLED (Mode 0)" : "DISABLED (Mode 2)");
     }
   }
+  // CMD 0x09: Synthesis Engine Mode (1 byte: 0 = Dynamic Fs, 1 = Fixed 1.000 MSPS DDS)
+  else if (rxCmd == 0x09 && rxLen >= 1) {
+    ddsModeEnabled = (rxBuf[0] != 0);
+    recomputeAndApplySynthesis();
+    uint8_t ackPayload[2] = { 0x09, (uint8_t)(ddsModeEnabled ? 1 : 0) };
+    sendPacket(replyStream, 0x81, ackPayload, sizeof(ackPayload));
+    if (Serial) {
+      Serial.print("[PACKET -> STM32] Synthesis Engine Mode: ");
+      Serial.println(ddsModeEnabled ? "FIXED 1.000 MSPS DDS (Phase Accumulator)" : "DYNAMIC FS (Hardware Slicing)");
+    }
+  }
   // CMD 0x10..0x13: 16-sample AWG Chunks (17 bytes: ch + 16 data)
   else if (rxCmd >= 0x10 && rxCmd <= 0x13 && rxLen >= 17) {
     uint8_t chunkIdx = rxCmd - 0x10;
@@ -717,6 +808,8 @@ void processUsbCli(void) {
         Serial.println("  duty <1-99>          : Set PWM duty cycle percentage");
         Serial.println("  eqn <formula>        : Compile equation (e.g. sin(t)+0.5*sin(3*t))");
         Serial.println("  buf on / buf off     : Toggle internal DAC buffer (Mode 0 vs Mode 2 unbuffered)");
+        Serial.println("  dds on / dds off     : Toggle fixed 1.000 MSPS DDS phase accumulator engine");
+        Serial.println("  mode <dds/dyn>       : Set synthesis mode (dds = 1 MSPS DDS, dyn = dynamic fs)");
         Serial.println("  mute / unmute        : Disable / Enable DAC output");
         Serial.println("-------------------------------------------------------------\n");
       } else if (strcmp(cmdLine, "status") == 0) {
@@ -726,6 +819,7 @@ void processUsbCli(void) {
         Serial.print("  HAL SysClk:     "); Serial.print((unsigned long)HAL_RCC_GetSysClockFreq()); Serial.println(" Hz");
         Serial.print("  HAL HCLK:       "); Serial.print((unsigned long)HAL_RCC_GetHCLKFreq()); Serial.println(" Hz");
         Serial.print("  HAL PCLK1:      "); Serial.print((unsigned long)HAL_RCC_GetPCLK1Freq()); Serial.println(" Hz");
+        Serial.print("  Engine Mode:    "); Serial.println(ddsModeEnabled ? "FIXED 1.000 MSPS DDS (Phase Accumulator)" : "DYNAMIC FS (Hardware Slicing)");
         Serial.print("  DAC Buffer:     "); Serial.println(dacBufferEnabled ? "ON (Mode 0: ~0.2V-3.1V)" : "OFF (Mode 2: 0.0V-3.3V Rail-to-Rail)");
         Serial.print("  Target Freq:    "); Serial.print(ch1.freq, 2); Serial.println(" Hz");
         Serial.print("  Actual Fout:    "); Serial.print((float)actualFout, 2); Serial.print(" Hz (Error: "); Serial.print(freqErrorPct, 3); Serial.println("%)");
@@ -744,6 +838,14 @@ void processUsbCli(void) {
       } else if (strcmp(cmdLine, "buf off") == 0 || strcmp(cmdLine, "buffer off") == 0) {
         applyDacBufferMode(false);
         Serial.println("[OK] DAC Output Buffer: DISABLED (Mode 2: true 0.0V-3.3V rail-to-rail, ideal for external op-amp)");
+      } else if (strcmp(cmdLine, "dds on") == 0 || strcmp(cmdLine, "mode dds") == 0) {
+        ddsModeEnabled = true;
+        recomputeAndApplySynthesis();
+        Serial.println("[OK] Synthesis Engine: FIXED 1.000 MSPS DDS ENABLED (ARR=249, PSC=0 @ 250 MHz)");
+      } else if (strcmp(cmdLine, "dds off") == 0 || strcmp(cmdLine, "mode dyn") == 0) {
+        ddsModeEnabled = false;
+        recomputeAndApplySynthesis();
+        Serial.println("[OK] Synthesis Engine: DYNAMIC FS ENABLED (Hardware Timer Slicing)");
       } else if (strncmp(cmdLine, "eqn ", 4) == 0) {
         const char *formula = cmdLine + 4;
         if (strncmp(formula, "1 ", 2) == 0) formula += 2;
@@ -829,7 +931,9 @@ void loop() {
     Serial.print((uint32_t)ch1.freq);
     Serial.print(" Hz | Act: ");
     Serial.print((float)actualFout, 2);
-    Serial.print(" Hz | Health: 0x");
+    Serial.print(" Hz | Mode: ");
+    Serial.print(ddsModeEnabled ? "DDS_1M" : "DYN_FS");
+    Serial.print(" | Health: 0x");
     Serial.print(getSamplingHealthByte(), HEX);
     Serial.print(" | UDR: ");
     Serial.print(totalDmaUnderruns);

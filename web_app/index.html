@@ -949,7 +949,8 @@
       <div class="bento-card">
         <div class="bento-header">
           <div class="bento-title">DIAGNOSTICS</div>
-          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+            <button class="bento-tag tech-mono" id="btnEngineMode" style="cursor: pointer; background: rgba(255,255,255,0.06); border: 1px solid var(--border-color); color: var(--text-secondary); transition: all 0.2s ease;">ENGINE: DYNAMIC FS</button>
             <div class="bento-tag tech-mono" id="telSamplingHealth" style="color: #00ff66;">SAMPLING: PURE // DMA OK</div>
             <div class="bento-tag tech-mono" id="telLinkState">STM32 ONLINE // RTT: 0.8ms</div>
           </div>
@@ -1085,6 +1086,7 @@
       offset: 0,              // -128..127 (-1.65V..+1.65V)
       dutyCycle: 50,          // 1..99%
       dacBufferEnabled: true, // true=Mode 0, false=Mode 2
+      ddsModeEnabled: false,   // false=Dynamic Fs, true=Fixed 1.0 MSPS DDS
       equationStr: "sin(t) + 0.5*sin(3*t)",
       awgSamples: new Uint8Array(64).fill(128),
       
@@ -1269,6 +1271,10 @@
         } else if (ackedCmd === 0x07) {
           const bufMode = v.getUint8(2) !== 0;
           showToast(`CONFIRMED: DAC Buffer ${bufMode ? 'ENABLED (Mode 0)' : 'DISABLED (Mode 2)'}`);
+        } else if (ackedCmd === 0x09) {
+          state.ddsModeEnabled = (v.getUint8(2) !== 0);
+          updateEngineModeUI();
+          updateFrequency(state.frequency);
         } else if (ackedCmd >= 0x10 && ackedCmd <= 0x13) {
           const chunk = v.getUint8(2);
           showToast(`CONFIRMED: AWG Block ${chunk + 1}/4 Verified`);
@@ -1333,6 +1339,15 @@
       showToast(`DAC Buffer: ${enabled ? 'ON (Mode 0 ~0.2V-3.1V)' : 'OFF (Mode 2 Rail-to-Rail 0-3.3V)'}`);
     }
 
+    function sendEngineModeToggle(isDds) {
+      state.ddsModeEnabled = isDds;
+      const packet = buildPacket(0x09, [isDds ? 1 : 0]);
+      sendBleRaw(packet);
+      updateEngineModeUI();
+      updateFrequency(state.frequency);
+      haptics.tick();
+    }
+
     function sendEquationToHardware(formula) {
       state.equationStr = formula;
       const enc = new TextEncoder();
@@ -1364,6 +1379,15 @@
 
     // --- OPTIMAL TIMING (K, ARR) SOLVER ---
     function calculateBestKArr(freq) {
+      if (state.ddsModeEnabled) {
+        const actFs = 1000000.0;
+        const inc = Math.round((freq / actFs) * 4294967296);
+        const actFout = (inc * actFs) / 4294967296;
+        const err = freq > 0 ? (Math.abs(actFout - freq) / freq * 100) : 0;
+        const pts = freq >= 1 ? Math.min(65535, Math.max(1, Math.round(actFs / freq))) : 2048;
+        return { k: 1, arr: 249, psc: 0, actFs: actFs, actFout: actFout, errPct: err, ptsPerCycle: pts };
+      }
+
       const timClk = 250000000;
       let minErr = 1e9;
       let bestK = 1;
@@ -1417,7 +1441,7 @@
       const actualFs = timing.actFs;
       const actualFout = timing.actFout;
       const errorPct = timing.errPct;
-      const ptsPerCycle = Math.round(2048 / timing.k);
+      const ptsPerCycle = timing.ptsPerCycle !== undefined ? timing.ptsPerCycle : Math.round(2048 / timing.k);
 
       state.actualFout = actualFout;
       state.freqErrorPct = errorPct;
@@ -1428,6 +1452,8 @@
       document.getElementById("telArrPsc").innerText = `${timing.arr} // ${timing.psc}`;
       const telPts = document.getElementById("telPtsPerCycle");
       if (telPts) telPts.innerText = `${ptsPerCycle} PTS`;
+      const telErr = document.getElementById("telError");
+      if (telErr) telErr.innerText = `${errorPct >= 0 ? '+' : ''}${errorPct.toFixed(3)} %`;
 
       // Synchronize slider and active decade button
       document.querySelectorAll(".decade-btn").forEach(btn => {
@@ -1478,6 +1504,22 @@
 
     function updateDacBufferUI() {
       // Buffer mode card removed
+    }
+
+    function updateEngineModeUI() {
+      const btn = document.getElementById("btnEngineMode");
+      if (!btn) return;
+      if (state.ddsModeEnabled) {
+        btn.innerText = "ENGINE: 1.0 MSPS DDS";
+        btn.style.color = "#00ff66";
+        btn.style.borderColor = "rgba(0, 255, 102, 0.4)";
+        btn.style.background = "rgba(0, 255, 102, 0.08)";
+      } else {
+        btn.innerText = "ENGINE: DYNAMIC FS";
+        btn.style.color = "var(--text-secondary)";
+        btn.style.borderColor = "var(--border-color)";
+        btn.style.background = "rgba(255, 255, 255, 0.06)";
+      }
     }
 
     function updateWaveformUI() {
@@ -1693,6 +1735,14 @@
         e.currentTarget.classList.toggle("active", haptics.enabled);
         showToast(`Tactile Clicks: ${haptics.enabled ? 'ENABLED' : 'DISABLED'}`);
       });
+
+      // Synthesis Engine Mode Toggle (Dynamic Fs vs Fixed 1.0 MSPS DDS)
+      const btnEngine = document.getElementById("btnEngineMode");
+      if (btnEngine) {
+        btnEngine.addEventListener("click", () => {
+          sendEngineModeToggle(!state.ddsModeEnabled);
+        });
+      }
 
 
       // Waveform Buttons
@@ -2035,6 +2085,7 @@
       updateOffset(0);
       updateWaveformUI();
       updateDacBufferUI();
+      updateEngineModeUI();
       updateEquationPreview();
     });
   </script>
