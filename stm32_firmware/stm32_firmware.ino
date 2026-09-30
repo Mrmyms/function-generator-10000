@@ -1,6 +1,6 @@
 /*
  * ==================================================================================================
- * FUNCTION GENERATOR 10000 - LABORATORY-GRADE STM32H503RB FIRMWARE (DAC1_OUT1)
+ * FUNCTION GENERATOR 10000 - DDS ARCHITECTURE (Fixed 1 MSPS + Wavetable + Interpolation)
  * ==================================================================================================
  * Hardware:  STM32 NUCLEO-H503RB (MB1814) @ 250 MHz Cortex-M33 with Hardware FPU
  * Output:
@@ -13,18 +13,15 @@
  * PC Monitoring / ST-Link:
  *   - USB CDC Serial @ 115200 bps (CLI + Live Telemetry + Binary Protocol)
  *
- * Silicon Architecture Upgrades:
- *   1. System Clock: 24 MHz HSE Crystal Oscillator -> PLL1 -> 250 MHz SYSCLK (with CSI fallback)
- *   2. PA4 Isolation: Forced to GPIO_MODE_ANALOG to prevent USART3 AF contention
- *   3. DMA Engine: Permanently fixed 2048-word circular transfer (8192 bytes)
- *      - Higher frequencies tile (2048 / N) power-of-2 repetitions into the buffer
- *      - GPDMA is NEVER stopped or reset, eliminating HAL_ERROR / DC freeze across 1 kHz
- *   4. Double Buffering: Inactive buffer synthesized and copied without stopping TIM6 (0 flat line)
- *   5. Accurate Frequency Reporting: Computes exact discrete ARR/PSC sampling rate and error %
- *   6. DWT Cycle Counter: Measures exact Cortex-M33 execution cycles and compute time in microseconds
- *   7. DAC Buffer Control: Switchable Buffer ON (Mode 0: ~0.2V-3.1V) / Buffer OFF (Mode 2: 0-3.3V)
- *   8. AWG Interpolation: Seamless 64-point wrap-around without cycle-boundary step discontinuity
- *   9. Silicon Hardware Noise: DAC1 hardware LFSR support ('h') alongside software PRNG ('n')
+ * DDS Architecture:
+ *   1. Fixed 1.000 MSPS sampling rate (TIM6 ARR=249, PSC=0 from 250 MHz)
+ *   2. 2048-point high-resolution wavetable (one perfect cycle, 0..2*PI)
+ *   3. 32-bit phase accumulator with linear interpolation between samples
+ *   4. Phase increment quantized so DMA buffer contains exact integer cycles
+ *      -> Eliminates discontinuity at circular DMA wrap point
+ *   5. Double-buffered: Inactive buffer synthesized, then memcpy'd while DMA runs
+ *   6. GPDMA permanently circular, NEVER stopped or reset
+ *   7. Frequency changes: only re-fill buffer + swap (instant, no glitch)
  * ==================================================================================================
  */
 
@@ -39,44 +36,65 @@
 
 // --- PINOUT DEFINITIONS ---
 #define PIN_DAC_CH1        PA4          // DAC1_OUT1 (Morpho / SB3)
-#define PIN_DAC_CH2        PA5          // DAC1_OUT2 (Arduino Header Pin D13 & LED LD2)
+#define PIN_DAC_CH2        PA5          // DAC1_OUT2 (Arduino D13 / LED LD2)
 
 // Serial1 connected to ESP32 Gateway (D0 PB15 / D1 PB14)
 Uart Serial1((PinName)PB_15_ALT1, (PinName)PB_14);
 
-// --- BUFFER & DMA CONFIGURATION ---
-// 2048 32-bit samples aligned to 32-byte cache boundaries (8192 bytes each)
+// ===========================================================================
+// DDS CORE PARAMETERS
+// ===========================================================================
+
+// Wavetable: 2048 points of one perfect cycle, pre-computed for each waveform
+#define WAVETABLE_SIZE     2048
+#define WAVETABLE_MASK     (WAVETABLE_SIZE - 1)
+#define WAVETABLE_BITS     11           // log2(2048)
+
+// DMA output buffer: 2048 32-bit samples, circular, double-buffered swap
 #define DMA_BUFFER_SAMPLES 2048
+
+// Phase accumulator: 32-bit unsigned, wraps at 2^32
+// Upper 11 bits = wavetable index, next 21 bits = fractional interpolation
+#define FIXED_SAMPLE_RATE  1000000UL    // 1.000 MSPS (exactly)
+#define PHASE_FRAC_BITS    21           // 32 - WAVETABLE_BITS
+
+// --- BUFFERS (cache-aligned) ---
+static uint16_t wavetable[WAVETABLE_SIZE] __attribute__((aligned(32)));  // 12-bit DAC values [0..4095]
+
 static uint32_t waveBufferA[DMA_BUFFER_SAMPLES] __attribute__((aligned(32)));
 static uint32_t waveBufferB[DMA_BUFFER_SAMPLES] __attribute__((aligned(32)));
-static volatile uint32_t *activeBuffer = waveBufferA;
+static volatile uint32_t *activeBuffer   = waveBufferA;
 static volatile uint32_t *inactiveBuffer = waveBufferB;
 
-// Current synthesis parameters
-static uint16_t currentSamplesPerCycle = 2048;
-static uint16_t currentRepetitions = 1;
+// DDS state
+static volatile uint32_t phaseIncrement  = 0;   // Phase step per DAC sample
+static uint32_t          numCyclesInBuf  = 1;   // How many complete waveform cycles in DMA buffer
 
-// Telemetry & Benchmark counters
+// Channel State
+static ChannelState ch1 = { 's', 1000.0f, 100, 0, true, 50, {0}, {"sin(t)", {0}, 0, 1.0f, false} };
+
+// Telemetry
+static double   actualFout = 1000.0;
+static float    freqErrorPct = 0.0f;
+static bool     dacBufferEnabled = true;
 static uint32_t lastComputeCycles = 0;
 static float    lastComputeTimeUs = 0.0f;
-static double   actualFs = 2049180.3;
-static double   actualFout = 1000.58;
-static float    freqErrorPct = 0.058f;
-static bool     dacBufferEnabled = true;
+static uint16_t currentSamplesPerCycle = 1000;
+static uint16_t currentRepetitions = 1;
 static const char *clockSourceStr = "Unknown";
 
-// --- SYNTHESIS ENGINE CONFIGURATION ---
-// Option: Fixed 1.000 MSPS DDS (true) vs Dynamic ARR/PSC Timer Slicing (false)
-static bool ddsModeEnabled = false; // Toggleable option: true = 1 MSPS Fixed DDS, false = Dynamic fs
-static volatile uint32_t ddsPhase = 0;
-static volatile uint32_t ddsPhaseInc = 0;
+static uint32_t totalPacketsReceived = 0;
+static uint32_t totalPingsAnswered   = 0;
+static uint32_t totalDmaUnderruns    = 0;
+static uint32_t lastDmaRemainingCbr1 = 0;
+static bool     dmaHardwareActive    = false;
 
 // GPDMA Linked List structures
 static DMA_HandleTypeDef hdma_dac;
 static DMA_NodeTypeDef   dmaNode __attribute__((aligned(32)));
 static DMA_QListTypeDef  dmaQueue;
 
-// --- FAST 32-BIT XORSHIFT PRNG FOR SOFTWARE NOISE ---
+// --- FAST 32-BIT XORSHIFT PRNG ---
 static uint32_t rngState = 0x12345678;
 static inline uint32_t xorshift32(void) {
   uint32_t x = rngState;
@@ -87,64 +105,43 @@ static inline uint32_t xorshift32(void) {
   return x;
 }
 
-// Channel State (Single High-Fidelity Channel)
-static ChannelState ch1 = { 's', 1000.0f, 100, 0, true, 50, {0}, {"sin(t)", {0}, 0, 1.0f, false} };
-
-// Telemetry counters
-static uint32_t totalPacketsReceived = 0;
-static uint32_t totalPingsAnswered   = 0;
-static uint32_t totalDmaUnderruns    = 0;
-static uint32_t lastDmaRemainingCbr1 = 0;
-static bool     dmaHardwareActive    = false;
-
-// Hardware Sampling Integrity & Safety Monitor
-// Bit 0: GPDMA actively transferring (1 = Active)
-// Bit 1: DMA Underrun free (1 = Pure sampling, 0 = Underrun occurred)
-// Bit 2: TIM6 Counter enabled (1 = Running)
-// Bit 3: DAC1 Channel 1 enabled (1 = Output active)
-// Bit 4: Amplitude valid (not clipping)
+// ===========================================================================
+// HARDWARE HEALTH MONITOR
+// ===========================================================================
 uint8_t getSamplingHealthByte(void) {
   uint8_t health = 0;
 
-  // 1. Check Hardware DAC Underrun Flag (DMAUDR1)
+  // Bit 1: Check DAC underrun flag
   if (DAC1->SR & DAC_SR_DMAUDR1) {
-    DAC1->SR = DAC_SR_DMAUDR1; // Clear hardware flag
+    DAC1->SR = DAC_SR_DMAUDR1;
     totalDmaUnderruns++;
   } else {
-    health |= 0x02; // Bit 1: Clean sampling
+    health |= 0x02;
   }
 
-  // 2. Check GPDMA CBR1 register progress (DMA Heartbeat)
+  // Bit 0: Check GPDMA activity
   uint32_t currentCbr1 = GPDMA1_Channel0->CBR1;
   if (currentCbr1 != lastDmaRemainingCbr1) {
     dmaHardwareActive = true;
     lastDmaRemainingCbr1 = currentCbr1;
   }
-  if (dmaHardwareActive) {
-    health |= 0x01; // Bit 0: DMA active
-  }
+  if (dmaHardwareActive) health |= 0x01;
 
-  // 3. Check TIM6 status
-  if (LL_TIM_IsEnabledCounter(TIM6)) {
-    health |= 0x04; // Bit 2: TIM6 enabled
-  }
+  // Bit 2: TIM6 running
+  if (LL_TIM_IsEnabledCounter(TIM6)) health |= 0x04;
 
-  // 4. Output state
-  if (ch1.enabled) {
-    health |= 0x08; // Bit 3: Channel enabled
-  }
+  // Bit 3: Channel enabled
+  if (ch1.enabled) health |= 0x08;
 
-  // 5. Anti-clipping / valid amplitude
-  if (ch1.amp > 0 && ch1.amp <= 100) {
-    health |= 0x10; // Bit 4: Valid amplitude
-  }
+  // Bit 4: Valid amplitude
+  if (ch1.amp > 0 && ch1.amp <= 100) health |= 0x10;
 
   return health;
 }
 
-// Using official variant SystemClock_Config @ 250 MHz
-
-// --- CRC8 CALCULATION (POLYNOMIAL 0x07) ---
+// ===========================================================================
+// CRC8 & PACKET FRAMING
+// ===========================================================================
 uint8_t calcCRC8(const uint8_t *data, size_t len) {
   uint8_t crc = 0;
   while (len--) {
@@ -156,14 +153,11 @@ uint8_t calcCRC8(const uint8_t *data, size_t len) {
   return crc;
 }
 
-// Send binary packet to target stream (Serial1 or Serial)
 void sendPacket(Stream &s, uint8_t cmd, const uint8_t *payload, size_t len) {
   uint8_t header[4] = { 0xAA, 0x55, cmd, (uint8_t)len };
   uint8_t crc = calcCRC8(payload, len) ^ calcCRC8(header, 4);
   s.write(header, 4);
-  if (len > 0 && payload != nullptr) {
-    s.write(payload, len);
-  }
+  if (len > 0 && payload != nullptr) s.write(payload, len);
   s.write(crc);
 }
 
@@ -171,85 +165,79 @@ void sendPacketToESP(uint8_t cmd, const uint8_t *payload, size_t len) {
   sendPacket(Serial1, cmd, payload, len);
 }
 
-// --- DAC BUFFER MODE CONFIGURATION ---
+// ===========================================================================
+// DAC BUFFER MODE
+// ===========================================================================
 void applyDacBufferMode(bool enableBuffer) {
   dacBufferEnabled = enableBuffer;
   uint32_t savedCr = DAC1->CR;
-  DAC1->CR &= ~(DAC_CR_EN1 | DAC_CR_EN2);
+  DAC1->CR &= ~(DAC_CR_EN1);
   delayMicroseconds(2);
   if (enableBuffer) {
-    // Mode 0: External pin with Buffer enabled for both CH1 (PA4) and CH2 (PA5/D13)
-    DAC1->MCR &= ~((7U << DAC_MCR_MODE1_Pos) | (7U << DAC_MCR_MODE2_Pos));
+    DAC1->MCR &= ~(7U << DAC_MCR_MODE1_Pos);
   } else {
-    // Mode 2: External pin with Buffer disabled for both CH1 and CH2
-    DAC1->MCR = (DAC1->MCR & ~((7U << DAC_MCR_MODE1_Pos) | (7U << DAC_MCR_MODE2_Pos)))
-                | (2U << DAC_MCR_MODE1_Pos) | (2U << DAC_MCR_MODE2_Pos);
+    DAC1->MCR = (DAC1->MCR & ~(7U << DAC_MCR_MODE1_Pos))
+                | (2U << DAC_MCR_MODE1_Pos);
   }
   delayMicroseconds(2);
   DAC1->CR = savedCr;
 }
 
-// --- MATHEMATICAL SYNTHESIS ENGINE (CORTEX-M33 FPU) ---
-// Synthesizes K complete cycles across the 2048-word DMA buffer directly into dest
-void synthesizeBufferWithKCycles(const ChannelState &cfg, uint16_t k, uint32_t *dest) {
-  const float ampScale = (float)cfg.amp / 100.0f;
-  const float dcOffset = ((float)cfg.offset / 128.0f) * 2047.0f;
-  const float dutyFrac = (float)constrain((int)cfg.duty, 1, 99) / 100.0f;
+// ===========================================================================
+// WAVETABLE BUILDER - Compute one perfect waveform cycle (2048 points)
+// ===========================================================================
+void rebuildWavetable(void) {
+  const float ampScale = (float)ch1.amp / 100.0f;
+  const float dcOffset = ((float)ch1.offset / 128.0f) * 2047.0f;
+  const float dutyFrac = (float)constrain((int)ch1.duty, 1, 99) / 100.0f;
 
-  for (uint16_t i = 0; i < DMA_BUFFER_SAMPLES; i++) {
-    uint16_t dacVal = 2048; // DC bias midpoint (1.65 V)
+  for (uint16_t i = 0; i < WAVETABLE_SIZE; i++) {
+    float normPhase = (float)i / (float)WAVETABLE_SIZE;  // [0.0 .. 1.0)
+    float rawSample = 0.0f;
 
-    if (cfg.enabled && cfg.amp > 0) {
-      // Modulo DMA_BUFFER_SAMPLES (2048) guarantees 100% continuous phase across circular buffer boundary
-      uint32_t phaseIndex = ((uint32_t)i * (uint32_t)k) & (DMA_BUFFER_SAMPLES - 1);
-      float normPhase = (float)phaseIndex / (float)DMA_BUFFER_SAMPLES;
-      float rawSample = 0.0f; // Range: [-1.0, +1.0]
-
-      switch (cfg.wave) {
-        case 's': // Sine Wave (Hardware FPU accelerated)
+    if (ch1.enabled && ch1.amp > 0) {
+      switch (ch1.wave) {
+        case 's': // Sine
           rawSample = sinf(normPhase * 2.0f * (float)M_PI);
           break;
 
-        case 'q': // Square Wave
-        case 'p': // PWM (Pulse Width Modulation)
+        case 'q': // Square
+        case 'p': // PWM
           rawSample = (normPhase < dutyFrac) ? 1.0f : -1.0f;
           break;
 
-        case 't': // Triangle Wave
-          if (normPhase < 0.5f) {
+        case 't': // Triangle
+          if (normPhase < 0.5f)
             rawSample = 4.0f * normPhase - 1.0f;
-          } else {
+          else
             rawSample = 3.0f - 4.0f * normPhase;
-          }
           break;
 
-        case 'a': // Sawtooth Wave
+        case 'a': // Sawtooth
           rawSample = 2.0f * normPhase - 1.0f;
           break;
 
-        case 'n': // White Noise (Software PRNG Xorshift32 table)
+        case 'n': // Software noise (randomized table)
           rawSample = ((float)(xorshift32() & 0xFFF) / 2047.5f) - 1.0f;
           break;
 
-        case 'c': { // Custom AWG (64-point interpolation, seamless 63 -> 0 wrap)
+        case 'c': { // Custom AWG (64 points upsampled with interpolation)
           float awgPos = normPhase * 64.0f;
           int idx0 = (int)awgPos;
           if (idx0 >= 64) idx0 = 63;
-          int idx1 = (idx0 + 1) & 63; // Seamlessly wraps 63 -> 0
-          float frac = (normPhase * 64.0f) - (float)idx0;
-          float v0 = ((float)cfg.awgSamples[idx0] / 127.5f) - 1.0f;
-          float v1 = ((float)cfg.awgSamples[idx1] / 127.5f) - 1.0f;
+          int idx1 = (idx0 + 1) & 63;
+          float frac = awgPos - (float)idx0;
+          float v0 = ((float)ch1.awgSamples[idx0] / 127.5f) - 1.0f;
+          float v1 = ((float)ch1.awgSamples[idx1] / 127.5f) - 1.0f;
           rawSample = v0 + frac * (v1 - v0);
           break;
         }
 
-        case 'e': { // Custom Mathematical Equation Mode (Bytecode VM)
-          if (cfg.mathExpr.isValid) {
+        case 'e': { // Equation (Bytecode VM)
+          if (ch1.mathExpr.isValid) {
             float t = normPhase * 2.0f * (float)M_PI;
-            rawSample = evalMathBytecode(cfg.mathExpr.bytecode, normPhase, t) * cfg.mathExpr.normScale;
-            if (isnan(rawSample) || isinf(rawSample)) {
-              rawSample = 0.0f;
-            }
+            rawSample = evalMathBytecode(ch1.mathExpr.bytecode, normPhase, t) * ch1.mathExpr.normScale;
+            if (isnan(rawSample) || isinf(rawSample)) rawSample = 0.0f;
           } else {
             rawSample = sinf(normPhase * 2.0f * (float)M_PI);
           }
@@ -260,226 +248,216 @@ void synthesizeBufferWithKCycles(const ChannelState &cfg, uint16_t k, uint32_t *
           rawSample = sinf(normPhase * 2.0f * (float)M_PI);
           break;
       }
-
-      // Apply Amplitude Scale and DC Offset, then clamp to 12-bit DAC range [0, 4095]
-      float dacOut = 2047.5f + (rawSample * 2047.0f * ampScale) + dcOffset;
-      if (dacOut < 0.0f)    dacOut = 0.0f;
-      if (dacOut > 4095.0f) dacOut = 4095.0f;
-      dacVal = (uint16_t)dacOut;
     }
 
-    // Pack same 12-bit sample to both DAC1_OUT1 (PA4) and DAC1_OUT2 (PA5 / Arduino D13)
-    dest[i] = ((uint32_t)(dacVal & 0x0FFF) << 16) | (uint32_t)(dacVal & 0x0FFF);
+    // Scale, offset, clamp to 12-bit
+    float dacOut = 2047.5f + (rawSample * 2047.0f * ampScale) + dcOffset;
+    if (dacOut < 0.0f)    dacOut = 0.0f;
+    if (dacOut > 4095.0f) dacOut = 4095.0f;
+    wavetable[i] = (uint16_t)dacOut;
   }
 }
 
-// --- DDS REAL-TIME PHASE ACCUMULATOR SYNTHESIS (FIXED 1.000 MSPS MODE) ---
-void fillDdsHalfBuffer(uint8_t half) {
-  uint32_t *dest = (half == 0) ? (uint32_t*)&activeBuffer[0] : (uint32_t*)&activeBuffer[1024];
-  uint32_t phase = ddsPhase;
-  const uint32_t inc = ddsPhaseInc;
-  const uint32_t *lut = (const uint32_t*)inactiveBuffer;
+// ===========================================================================
+// DDS BUFFER FILL - Phase Accumulator + Linear Interpolation
+// ===========================================================================
+// Fills the DMA buffer with exactly numCycles complete waveform cycles,
+// using the phase accumulator to walk the wavetable with sub-sample precision.
+// Linear interpolation between adjacent wavetable entries ensures smooth output.
 
-  if (!ch1.enabled || ch1.amp == 0) {
-    const uint32_t dc = (2048UL << 16) | 2048UL;
-    for (int i = 0; i < 1024; i++) {
-      dest[i] = dc;
+void fillDmaBufferDDS(uint32_t *dest, uint32_t numSamples, uint32_t phaseInc) {
+  uint32_t phase = 0;  // Start at phase 0 (exact cycle alignment)
+
+  const bool isNoise  = (ch1.wave == 'n');
+  const bool isHwNoise = (ch1.wave == 'h');
+
+  if (isHwNoise) {
+    // Hardware LFSR noise: midpoint value, DAC hardware adds noise
+    for (uint32_t i = 0; i < numSamples; i++) {
+      dest[i] = (2048U << 16) | 2048U;
     }
-    ddsPhase = phase + inc * 1024;
     return;
   }
 
-  for (int i = 0; i < 1024; i++) {
-    phase += inc;
-    dest[i] = lut[(phase >> 21) & 0x7FF];
+  if (isNoise) {
+    // Software noise: real-time random (independent of wavetable)
+    const float ampScale = (float)ch1.amp / 100.0f;
+    const float dcOffset = ((float)ch1.offset / 128.0f) * 2047.0f;
+    for (uint32_t i = 0; i < numSamples; i++) {
+      float raw = ((float)(xorshift32() & 0xFFF) / 2047.5f) - 1.0f;
+      float dacOut = 2047.5f + (raw * 2047.0f * ampScale) + dcOffset;
+      if (dacOut < 0.0f)    dacOut = 0.0f;
+      if (dacOut > 4095.0f) dacOut = 4095.0f;
+      uint16_t val = (uint16_t)dacOut;
+      dest[i] = ((uint32_t)val << 16) | (uint32_t)val;
+    }
+    return;
   }
-  ddsPhase = phase;
+
+  // DDS with linear interpolation from wavetable
+  for (uint32_t i = 0; i < numSamples; i++) {
+    // Upper 12 bits = wavetable index, next 20 bits = fractional part
+    uint32_t idx0 = (phase >> PHASE_FRAC_BITS) & WAVETABLE_MASK;
+    uint32_t idx1 = (idx0 + 1) & WAVETABLE_MASK;
+    uint32_t frac = (phase >> (PHASE_FRAC_BITS - 12)) & 0xFFF;  // 12-bit fraction [0..4095]
+
+    // Linear interpolation: y = y0 + (y1 - y0) * frac / 4096
+    int32_t y0 = (int32_t)wavetable[idx0];
+    int32_t y1 = (int32_t)wavetable[idx1];
+    int32_t interpolated = y0 + (((y1 - y0) * (int32_t)frac) >> 12);
+
+    // Clamp
+    if (interpolated < 0)    interpolated = 0;
+    if (interpolated > 4095) interpolated = 4095;
+
+    uint16_t dacVal = (uint16_t)interpolated;
+    dest[i] = ((uint32_t)dacVal << 16) | (uint32_t)dacVal;
+
+    phase += phaseInc;
+  }
 }
 
-// GPDMA1 Channel 0 Hardware Interrupt Handler (Servicing HT and TC in DDS Mode)
-extern "C" void GPDMA1_Channel0_IRQHandler(void) {
-  uint32_t csr = GPDMA1_Channel0->CSR;
-  if (csr & DMA_CSR_HTF) {
-    GPDMA1_Channel0->CFCR = DMA_CFCR_HTF; // Clear Half-Transfer Flag
-    if (ddsModeEnabled) {
-      fillDdsHalfBuffer(0); // Half 0 completed playback, refill Half 0
-    }
-  }
-  if (csr & DMA_CSR_TCF) {
-    GPDMA1_Channel0->CFCR = DMA_CFCR_TCF; // Clear Transfer-Complete Flag
-    if (ddsModeEnabled) {
-      fillDdsHalfBuffer(1); // Half 1 completed playback, refill Half 1
-    }
-  }
+// ===========================================================================
+// DDS FREQUENCY SOLVER - Compute optimal phase increment for clean DMA loop
+// ===========================================================================
+// Key constraint: the DMA buffer (2048 samples) must contain an EXACT integer
+// number of waveform cycles so that circular DMA wraps without discontinuity.
+//
+// numCycles = round(freq * DMA_BUFFER_SAMPLES / SAMPLE_RATE)
+// phaseIncrement = (numCycles * 2^32) / DMA_BUFFER_SAMPLES
+// actualFout = numCycles * SAMPLE_RATE / DMA_BUFFER_SAMPLES
+
+void computePhaseIncrement(void) {
+  double freq = (double)ch1.freq;
+  if (freq < 0.1) freq = 0.1;
+  if (freq > 500000.0) freq = 500000.0;
+
+  // How many complete cycles fit in the DMA buffer?
+  double rawCycles = freq * (double)DMA_BUFFER_SAMPLES / (double)FIXED_SAMPLE_RATE;
+  uint32_t nCycles = (uint32_t)round(rawCycles);
+  if (nCycles < 1) nCycles = 1;
+  // Cap at half the buffer (Nyquist: at least 2 samples per cycle)
+  if (nCycles > DMA_BUFFER_SAMPLES / 2) nCycles = DMA_BUFFER_SAMPLES / 2;
+
+  numCyclesInBuf = nCycles;
+
+  // Phase increment so that exactly nCycles complete in DMA_BUFFER_SAMPLES
+  // phaseInc = nCycles * 2^32 / DMA_BUFFER_SAMPLES
+  double incDouble = (double)nCycles * 4294967296.0 / (double)DMA_BUFFER_SAMPLES;
+  phaseIncrement = (uint32_t)round(incDouble);
+
+  // Actual output frequency
+  actualFout = (double)nCycles * (double)FIXED_SAMPLE_RATE / (double)DMA_BUFFER_SAMPLES;
+  freqErrorPct = (float)(fabs(actualFout - freq) / freq * 100.0);
+
+  // Points per cycle
+  currentSamplesPerCycle = (uint16_t)(DMA_BUFFER_SAMPLES / nCycles);
+  currentRepetitions = (uint16_t)nCycles;
 }
 
-// --- APPLY SYNTHESIS TO HARDWARE REGISTERS (ZERO-GLITCH DUAL ENGINE) ---
+// ===========================================================================
+// FULL SYNTHESIS PIPELINE: Wavetable + DDS + Double-Buffer Swap
+// ===========================================================================
 void recomputeAndApplySynthesis(void) {
-  float refFreq = ch1.freq;
-  if (refFreq < 1.0f) refFreq = 1.0f;
+  uint32_t tStart = DWT->CYCCNT;
 
-  if (ddsModeEnabled) {
-    // =========================================================================
-    // OPTION B: FIXED 1.000 MSPS DDS MODE (PHASE ACCUMULATOR SYNTHESIS)
-    // =========================================================================
-    // 1. Lock TIM6 permanently to exactly 1.000000 MSPS (250 MHz / 250 = 1.000000 MHz)
-    LL_TIM_SetPrescaler(TIM6, 0);
-    LL_TIM_SetAutoReload(TIM6, 249);
+  // 1. Rebuild wavetable for current waveform shape
+  rebuildWavetable();
 
-    // 2. Synthesize 1 complete cycle (2048 samples) into inactiveBuffer as our wavetable
-    uint32_t tStart = micros();
-    synthesizeBufferWithKCycles(ch1, 1, (uint32_t*)inactiveBuffer);
-    uint32_t tElapsed = micros() - tStart;
-    lastComputeTimeUs = (float)tElapsed;
-    lastComputeCycles = tElapsed * 250;
+  // 2. Compute optimal phase increment
+  computePhaseIncrement();
 
-    // 3. 32-bit Phase Increment: inc = (f / 1,000,000) * 2^32
-    ddsPhaseInc = (uint32_t)round(((double)refFreq / 1000000.0) * 4294967296.0);
-
-    // 4. Update discrete telemetry
-    actualFs = 1000000.0;
-    actualFout = (double)ddsPhaseInc * 1000000.0 / 4294967296.0;
-    freqErrorPct = (float)(fabs(actualFout - (double)refFreq) / (double)refFreq * 100.0);
-    currentSamplesPerCycle = (refFreq >= 1.0f) ? (uint16_t)constrain((int)round(1000000.0f / refFreq), 1, 65535) : 2048;
-    currentRepetitions = 1;
-
-    // Pre-fill both halves of activeBuffer so DAC output updates immediately
-    fillDdsHalfBuffer(0);
-    fillDdsHalfBuffer(1);
-  } else {
-    // =========================================================================
-    // OPTION A: DYNAMIC FS / HARDWARE TIMER SLICING MODE
-    // =========================================================================
-    double timClk = (double)SystemCoreClock; // 250 MHz
-    double minErr = 1e9;
-    uint16_t bestK = 1;
-    uint32_t bestArr = 1;
-    uint32_t bestPsc = 0;
-    double bestFs = 0;
-    double bestFout = (double)refFreq;
-
-    uint16_t maxK = 128;
-    if (refFreq <= 2000.0f)       maxK = 16;
-    else if (refFreq <= 10000.0f) maxK = 32;
-    else if (refFreq <= 50000.0f) maxK = 64;
-
-    for (uint16_t k = 1; k <= maxK; k++) {
-      double fsTarget = (double)refFreq * (double)DMA_BUFFER_SAMPLES / (double)k;
-      if (fsTarget > 3500000.0 && refFreq > 2000.0f) continue;
-      if (fsTarget < 50000.0 && refFreq > 100.0f) continue;
-
-      double div = timClk / fsTarget;
-      uint32_t psc = 0;
-      uint32_t arr = (uint32_t)round(div) - 1;
-      if (arr > 65535) {
-        psc = (uint32_t)(div / 65535.0);
-        arr = (uint32_t)round(div / (double)(psc + 1)) - 1;
-      }
-      if (arr < 1) arr = 1;
-
-      double actFs = timClk / ((double)(psc + 1) * (double)(arr + 1));
-      double actFout = (actFs * (double)k) / (double)DMA_BUFFER_SAMPLES;
-      double err = fabs(actFout - (double)refFreq) / (double)refFreq * 100.0;
-
-      if (err < minErr) {
-        minErr = err;
-        bestK = k;
-        bestArr = arr;
-        bestPsc = psc;
-        bestFs = actFs;
-        bestFout = actFout;
-      }
-    }
-
-    currentSamplesPerCycle = DMA_BUFFER_SAMPLES / bestK;
-    currentRepetitions = bestK;
-
-    // 2. Measure exact synthesis duration using micros()
-    uint32_t tStart = micros();
-    synthesizeBufferWithKCycles(ch1, bestK, (uint32_t*)inactiveBuffer);
-    uint32_t tElapsed = micros() - tStart;
-    lastComputeTimeUs = (float)tElapsed;
-    lastComputeCycles = tElapsed * 250;
-
-    // 3. Seamless atomic buffer copy (TIM6 and DMA NEVER stop!)
-    memcpy((void*)activeBuffer, (void*)inactiveBuffer, DMA_BUFFER_SAMPLES * sizeof(uint32_t));
-
-    // 4. Update discrete telemetry variables
-    actualFs = bestFs;
-    actualFout = bestFout;
-    freqErrorPct = (float)minErr;
-
-    // 5. Update TIM6 Prescaler and ARR dynamically
-    LL_TIM_SetPrescaler(TIM6, bestPsc);
-    LL_TIM_SetAutoReload(TIM6, bestArr);
-  }
-
-  // 6. Handle hardware silicon noise mode ('h')
+  // 3. Handle hardware noise mode
   if (ch1.wave == 'h') {
-    // True non-periodic LFSR noise generated in DAC silicon on both channels on every TIM6 tick
-    DAC1->CR |= (DAC_CR_WAVE1_0 | (0x0B << DAC_CR_MAMP1_Pos) | DAC_CR_WAVE2_0 | (0x0B << DAC_CR_MAMP2_Pos));
+    DAC1->CR |= (DAC_CR_WAVE1_0 | (0x0B << DAC_CR_MAMP1_Pos));
   } else {
-    // Normal circular DMA waveform playback
-    DAC1->CR &= ~(DAC_CR_WAVE1_Msk | DAC_CR_MAMP1_Msk | DAC_CR_WAVE2_Msk | DAC_CR_MAMP2_Msk);
+    DAC1->CR &= ~(DAC_CR_WAVE1_Msk | DAC_CR_MAMP1_Msk);
   }
+
+  // 4. Fill inactive buffer using DDS phase accumulator + interpolation
+  fillDmaBufferDDS((uint32_t *)inactiveBuffer, DMA_BUFFER_SAMPLES, phaseIncrement);
+
+  // 5. Atomic swap: copy inactive -> active (DMA keeps running)
+  memcpy((void *)activeBuffer, (const void *)inactiveBuffer, DMA_BUFFER_SAMPLES * sizeof(uint32_t));
+
+  // 6. Benchmark
+  uint32_t elapsed = DWT->CYCCNT - tStart;
+  lastComputeCycles = elapsed;
+  lastComputeTimeUs = (float)elapsed / 250.0f;  // 250 MHz
 }
 
+// ===========================================================================
+// ASSERT HANDLER
+// ===========================================================================
 extern "C" void assert_failed(uint8_t* file, uint32_t line) {
-  Serial.printf("\n*** HAL ASSERTION FAILED: %s:%lu ***\n", (char*)file, line);
-  while(1) {
-    delay(1000);
-  }
+  Serial.printf("\n*** HAL ASSERT: %s:%lu ***\n", (char*)file, line);
+  while(1) { delay(1000); }
 }
 
-// --- SETUP HARDWARE ---
+// ===========================================================================
+// SETUP
+// ===========================================================================
 void setup() {
-  // 1. Initialize Serial on actual NUCLEO-H503RB ST-Link VCP pins (PA3 RX / PA2 TX)
-  // This completely frees PA4 from USART3 Alternate Function contention!
-  Serial.setRx((PinName)PA_3);
-  Serial.setTx((PinName)PA_2);
   Serial.begin(115200);
   delay(100);
 
-  // 2. Configure PA4 (DAC1_OUT1) and PA5 (DAC1_OUT2 / D13) in true GPIO Analog Mode
-  __HAL_RCC_GPIOA_CLK_ENABLE();
-  GPIO_InitTypeDef gpioDac = {0};
-  gpioDac.Pin = GPIO_PIN_4 | GPIO_PIN_5;
-  gpioDac.Mode = GPIO_MODE_ANALOG;
-  gpioDac.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOA, &gpioDac);
-
   Serial.println("\n===========================================================");
-  Serial.println("   FUNCTION GENERATOR 10000 - STM32H503 SILICON FIRMWARE   ");
-  Serial.println("   250 MHz Cortex-M33 Hardware FPU | Autonomous GPDMA DAC  ");
-  Serial.println("   Clean Isolated DAC Out: PA4 (CN7 Pin 32) & D13 (PA5)    ");
-  Serial.println("   Formula Parser & 2048-Point Arbitrary Waveform Engine   ");
+  Serial.println("   FUNCTION GENERATOR 10000 - DDS ENGINE v6.0              ");
+  Serial.println("   250 MHz Cortex-M33 | Fixed 1.000 MSPS | Phase Accum     ");
+  Serial.println("   2048-Point Wavetable + Linear Interpolation              ");
+  Serial.println("   Circular DMA (2048 samples) + Double-Buffer Swap        ");
+  Serial.println("   Output: PA4 (DAC1_OUT1) -> CN7 Pin 32 (Arduino A2)      ");
   Serial.println("===========================================================");
-  Serial.println(" Clean Analog Out: Morpho PA4 (CN7 Pin 32 / Arduino A2)");
-  Serial.println(" Auxiliary Probe:  Arduino Header Pin D13 (PA5 / LD2)");
 
-  // 3. Serial1 connected to ESP32 Gateway (D0 PB15 / D1 PB14)
+  // 1. Serial1 for ESP32 Gateway
   Serial1.begin(115200);
+
+  // 2. Enable DWT Cycle Counter for benchmarking
+  CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+  DWT->CYCCNT = 0;
+  DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+
+  // 3. Detect clock source
+  uint32_t cfgr = RCC->CFGR1;
+  uint32_t sws = (cfgr >> 3) & 0x07;
+  switch (sws) {
+    case 0: clockSourceStr = "HSI (64 MHz Internal)"; break;
+    case 1: clockSourceStr = "CSI (4 MHz Fallback)"; break;
+    case 2: clockSourceStr = "HSE (24 MHz Crystal)"; break;
+    case 3: clockSourceStr = "PLL1 (250 MHz via HSE)"; break;
+    default: clockSourceStr = "Unknown"; break;
+  }
+  Serial.print("Clock Source: "); Serial.println(clockSourceStr);
+  Serial.print("SYSCLK: "); Serial.print((unsigned long)SystemCoreClock); Serial.println(" Hz");
 
   // 4. Compile default equation
   compileMathExpression("sin(t)", &ch1.mathExpr);
 
-  // 5. Initialize default AWG custom wave with Sinc function
+  // 5. Initialize AWG with sinc function
   for (int i = 0; i < 64; i++) {
     float x = ((float)i - 32.0f) * 0.3f;
     ch1.awgSamples[i] = (uint8_t)(128.0f + 120.0f * (x == 0.0f ? 1.0f : sinf(x) / x));
   }
 
-  // 6. Generate initial wave table (2048 samples @ 1 kHz on PA4)
-  synthesizeBufferWithKCycles(ch1, 1, (uint32_t*)activeBuffer);
-  memcpy((void*)inactiveBuffer, (void*)activeBuffer, DMA_BUFFER_SAMPLES * sizeof(uint32_t));
+  // 6. PA4 isolation
+  GPIO_InitTypeDef gpio = {0};
+  gpio.Pin  = GPIO_PIN_4;
+  gpio.Mode = GPIO_MODE_ANALOG;
+  gpio.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOA, &gpio);
 
-  // 7. Enable Peripheral Clocks
+  // 7. Build wavetable + fill DMA buffer
+  rebuildWavetable();
+  computePhaseIncrement();
+  fillDmaBufferDDS(waveBufferA, DMA_BUFFER_SAMPLES, phaseIncrement);
+  memcpy(waveBufferB, waveBufferA, DMA_BUFFER_SAMPLES * sizeof(uint32_t));
+
+  // 8. Enable peripheral clocks
   __HAL_RCC_DAC1_CLK_ENABLE();
   __HAL_RCC_TIM6_CLK_ENABLE();
   __HAL_RCC_GPDMA1_CLK_ENABLE();
 
-  // 8. Configure GPDMA1 Channel 0 for PERMANENT 2048-Word Circular Transfer to DAC1->DHR12R1
-  // Fixed size = 8192 bytes. GPDMA is NEVER stopped or reset!
+  // 9. Configure GPDMA1 Channel 0: 2048-Word Circular Transfer
   DMA_NodeConfTypeDef nodeConf = {0};
   nodeConf.NodeType = DMA_GPDMA_LINEAR_NODE;
   nodeConf.Init.Request = GPDMA1_REQUEST_DAC1_CH1;
@@ -498,9 +476,9 @@ void setup() {
   nodeConf.DataHandlingConfig.DataAlignment = DMA_DATA_RIGHTALIGN_ZEROPADDED;
   nodeConf.DataHandlingConfig.DataExchange = DMA_EXCHANGE_NONE;
   nodeConf.TriggerConfig.TriggerPolarity = DMA_TRIG_POLARITY_MASKED;
-  nodeConf.SrcAddress = (uint32_t)activeBuffer;
+  nodeConf.SrcAddress = (uint32_t)waveBufferA;
   nodeConf.DstAddress = (uint32_t)&(DAC1->DHR12RD);
-  nodeConf.DataSize   = DMA_BUFFER_SAMPLES * sizeof(uint32_t); // 8192 bytes FIXED
+  nodeConf.DataSize   = DMA_BUFFER_SAMPLES * sizeof(uint32_t);  // 8192 bytes
 
   HAL_DMAEx_List_BuildNode(&nodeConf, &dmaNode);
   HAL_DMAEx_List_InsertNode_Tail(&dmaQueue, &dmaNode);
@@ -518,54 +496,50 @@ void setup() {
   HAL_DMAEx_List_LinkQ(&hdma_dac, &dmaQueue);
   HAL_DMAEx_List_Start(&hdma_dac);
 
-  // Enable GPDMA1 Channel 0 Half-Transfer and Transfer-Complete interrupts
-  GPDMA1_Channel0->CCR |= (DMA_CCR_HTIE | DMA_CCR_TCIE);
-  NVIC_SetPriority(GPDMA1_Channel0_IRQn, 1);
-  NVIC_EnableIRQ(GPDMA1_Channel0_IRQn);
-
-  // 9. Configure DAC1 Channels 1 & 2 (Buffer ON by default, Mode 0)
+  // 10. Configure DAC1
   applyDacBufferMode(dacBufferEnabled);
   uint32_t cr_ch1 = (DAC_CR_TSEL1_2 | DAC_CR_TSEL1_0) | DAC_CR_TEN1 | DAC_CR_DMAEN1 | DAC_CR_EN1;
   uint32_t cr_ch2 = (DAC_CR_TSEL2_2 | DAC_CR_TSEL2_0) | DAC_CR_TEN2 | DAC_CR_EN2;
   DAC1->CR = cr_ch1 | cr_ch2;
   delayMicroseconds(20);
 
-  // 10. Start TIM6 at Initial Sampling Rate (1 kHz * 2048 samples = 2.049 MSPS, ARR=121)
+  // 11. Start TIM6 at fixed 1.000 MSPS: 250 MHz / (249+1) = 1,000,000 Hz
   LL_TIM_DisableCounter(TIM6);
   LL_TIM_SetPrescaler(TIM6, 0);
-  LL_TIM_SetAutoReload(TIM6, 121);
-  LL_TIM_EnableARRPreload(TIM6); // Hardware ARR Preload prevents timer glitches
+  LL_TIM_SetAutoReload(TIM6, 249);
+  LL_TIM_EnableARRPreload(TIM6);
   LL_TIM_SetTriggerOutput(TIM6, LL_TIM_TRGO_UPDATE);
   LL_TIM_EnableCounter(TIM6);
 
-  recomputeAndApplySynthesis();
-
-  Serial.println(">>> HIGH-FIDELITY 12-BIT DAC ENGINE ACTIVE <<<");
-  Serial.println(" - Clean Output: PA4 (CN7 Pin 32 / Arduino A2)");
-  Serial.println(" - GPDMA Mode:   Permanent 2048-Word Circular Loop (Zero DMA resets)");
-  Serial.println(" - Buffer Swap:  Double-buffered atomic switch (Zero flat-line glitches)");
-  Serial.println(" - DWT Benchmark Active (Microsecond-accurate cycle timing)");
-  Serial.println("Type 'help' in terminal for interactive CLI commands.");
+  Serial.println("\n>>> DDS ENGINE ACTIVE <<<");
+  Serial.println(" - Sampling:    1.000 MSPS (Fixed TIM6 ARR=249)");
+  Serial.println(" - Wavetable:   2048 points per cycle");
+  Serial.println(" - DMA Buffer:  2048 samples (circular, never reset)");
+  Serial.println(" - Interpolation: Linear (sub-sample precision)");
+  Serial.println(" - Phase Accum: 32-bit (0.000233 Hz resolution)");
+  Serial.println("Type 'help' for CLI commands.");
   Serial.println("===========================================================\n");
 }
 
-// --- PROTOCOL PACKET EXECUTOR (COMMON TO BLE AND USB) ---
+// ===========================================================================
+// PROTOCOL PACKET EXECUTOR (COMMON TO BLE AND USB)
+// ===========================================================================
 void executeCommandPacket(Stream &replyStream, uint8_t rxCmd, uint8_t rxLen, uint8_t *rxBuf) {
   totalPacketsReceived++;
 
-  // CMD 0x00: PING -> Respond with PONG (0x80)
+  // CMD 0x00: PING -> PONG (0x80)
   if (rxCmd == 0x00) {
     totalPingsAnswered++;
     uint8_t pongPayload[6];
     pongPayload[0] = (rxLen > 0) ? rxBuf[0] : 0;
     pongPayload[1] = (rxLen > 1) ? rxBuf[1] : 0;
-    pongPayload[2] = 0x54; // Hardware ID (STM32)
-    pongPayload[3] = getSamplingHealthByte(); // Real-time sampling health & integrity
-    pongPayload[4] = 0x05; // Firmware Version 5.0 (Laboratory Grade)
-    pongPayload[5] = dacBufferEnabled ? 0x01 : 0x00; // DAC Buffer status
+    pongPayload[2] = 0x54; // Hardware ID
+    pongPayload[3] = getSamplingHealthByte();
+    pongPayload[4] = 0x06; // Firmware v6.0 (DDS)
+    pongPayload[5] = dacBufferEnabled ? 0x01 : 0x00;
     sendPacket(replyStream, 0x80, pongPayload, sizeof(pongPayload));
   }
-  // CMD 0x01: Channel Configuration (9 to 29 bytes)
+  // CMD 0x01: Channel Configuration (9+ bytes)
   else if (rxCmd == 0x01 && rxLen >= 9) {
     ChannelPacket *p = (ChannelPacket *)rxBuf;
     ch1.wave    = p->waveform;
@@ -576,8 +550,7 @@ void executeCommandPacket(Stream &replyStream, uint8_t rxCmd, uint8_t rxLen, uin
     ch1.duty    = p->dutyCycle;
     recomputeAndApplySynthesis();
 
-    // Send rich confirmation ACK (11 bytes):
-    // [rxCmd, healthByte, underrunCount, nPts_low, nPts_high, f_b0..b3, waveChar, dacBuf]
+    // Rich ACK (11 bytes)
     uint8_t ackPayload[11];
     ackPayload[0] = 0x01;
     ackPayload[1] = getSamplingHealthByte();
@@ -594,28 +567,30 @@ void executeCommandPacket(Stream &replyStream, uint8_t rxCmd, uint8_t rxLen, uin
     sendPacket(replyStream, 0x81, ackPayload, sizeof(ackPayload));
 
     if (Serial) {
-      Serial.print("[PACKET -> STM32] Config ACK: Wave=");
+      Serial.print("[DDS] Config: ");
       Serial.print(ch1.wave);
-      Serial.print(", Freq=");
+      Serial.print(" @ ");
       Serial.print(ch1.freq);
-      Serial.print(" Hz, Amp=");
-      Serial.print(ch1.amp);
-      Serial.print("%, En=");
-      Serial.print(ch1.enabled);
-      Serial.print(" | Actual=");
+      Serial.print(" Hz -> Act=");
       Serial.print((float)actualFout, 2);
-      Serial.println(" Hz");
+      Serial.print(" Hz (");
+      Serial.print(currentSamplesPerCycle);
+      Serial.print(" pts x ");
+      Serial.print(numCyclesInBuf);
+      Serial.print(" cyc, Err=");
+      Serial.print(freqErrorPct, 4);
+      Serial.println("%)");
     }
   }
-  // CMD 0x02: Backward compatibility for CH2 (Acknowledge)
+  // CMD 0x02: CH2 backward compat
   else if (rxCmd == 0x02 && rxLen >= sizeof(ChannelPacket)) {
-    sendPacket(replyStream, 0x81, nullptr, 0); // Send ACK
+    sendPacket(replyStream, 0x81, nullptr, 0);
   }
-  // CMD 0x03: Phase shift (Acknowledge)
+  // CMD 0x03: Phase shift compat
   else if (rxCmd == 0x03 && rxLen >= 4) {
-    sendPacket(replyStream, 0x81, nullptr, 0); // Send ACK
+    sendPacket(replyStream, 0x81, nullptr, 0);
   }
-  // CMD 0x05: Equation Formula (ASCII string)
+  // CMD 0x05: Equation Formula
   else if (rxCmd == 0x05 && rxLen > 0) {
     char eqStr[96];
     uint8_t copyLen = (rxLen < 95) ? rxLen : 95;
@@ -641,44 +616,33 @@ void executeCommandPacket(Stream &replyStream, uint8_t rxCmd, uint8_t rxLen, uin
       sendPacket(replyStream, 0x81, ackPayload, sizeof(ackPayload));
 
       if (Serial) {
-        Serial.print("[PACKET -> STM32] Equation set: ");
+        Serial.print("[DDS] Equation: ");
         Serial.println(eqStr);
       }
     } else {
-      sendPacket(replyStream, 0x82, nullptr, 0); // NACK
+      sendPacket(replyStream, 0x82, nullptr, 0);
       if (Serial) {
-        Serial.print("[PACKET -> STM32] Invalid Equation: ");
+        Serial.print("[DDS] Bad equation: ");
         Serial.println(eqStr);
       }
     }
   }
-  // CMD 0x06: Backward compatibility for CH2 equation
+  // CMD 0x06: CH2 equation compat
   else if (rxCmd == 0x06 && rxLen > 0) {
-    sendPacket(replyStream, 0x81, nullptr, 0); // Send ACK
+    sendPacket(replyStream, 0x81, nullptr, 0);
   }
-  // CMD 0x07: DAC Output Buffer Mode (1 byte: 0 = Buffer OFF / Mode 2, 1 = Buffer ON / Mode 0)
+  // CMD 0x07: DAC Buffer Mode
   else if (rxCmd == 0x07 && rxLen >= 1) {
     bool enableBuf = (rxBuf[0] != 0);
     applyDacBufferMode(enableBuf);
     uint8_t ackPayload[2] = { 0x07, (uint8_t)(enableBuf ? 1 : 0) };
     sendPacket(replyStream, 0x81, ackPayload, sizeof(ackPayload));
     if (Serial) {
-      Serial.print("[PACKET -> STM32] DAC Buffer Mode: ");
-      Serial.println(enableBuf ? "ENABLED (Mode 0)" : "DISABLED (Mode 2)");
+      Serial.print("[DDS] DAC Buffer: ");
+      Serial.println(enableBuf ? "ON (Mode 0)" : "OFF (Mode 2)");
     }
   }
-  // CMD 0x09: Synthesis Engine Mode (1 byte: 0 = Dynamic Fs, 1 = Fixed 1.000 MSPS DDS)
-  else if (rxCmd == 0x09 && rxLen >= 1) {
-    ddsModeEnabled = (rxBuf[0] != 0);
-    recomputeAndApplySynthesis();
-    uint8_t ackPayload[2] = { 0x09, (uint8_t)(ddsModeEnabled ? 1 : 0) };
-    sendPacket(replyStream, 0x81, ackPayload, sizeof(ackPayload));
-    if (Serial) {
-      Serial.print("[PACKET -> STM32] Synthesis Engine Mode: ");
-      Serial.println(ddsModeEnabled ? "FIXED 1.000 MSPS DDS (Phase Accumulator)" : "DYNAMIC FS (Hardware Slicing)");
-    }
-  }
-  // CMD 0x10..0x13: 16-sample AWG Chunks (17 bytes: ch + 16 data)
+  // CMD 0x10..0x13: AWG Chunks (17 bytes: ch + 16 data)
   else if (rxCmd >= 0x10 && rxCmd <= 0x13 && rxLen >= 17) {
     uint8_t chunkIdx = rxCmd - 0x10;
     memcpy(&ch1.awgSamples[chunkIdx * 16], &rxBuf[1], 16);
@@ -688,36 +652,31 @@ void executeCommandPacket(Stream &replyStream, uint8_t rxCmd, uint8_t rxLen, uin
       ch1.wave = 'c';
       recomputeAndApplySynthesis();
       if (Serial) {
-        Serial.println("[PACKET -> STM32] AWG Complete (64 pts interpolated) on PA4!");
+        Serial.println("[DDS] AWG Complete (64pts -> 2048 wavetable)!");
       }
     }
   }
   else {
-    // Unrecognized command -> Send explicit NACK (0x82) with reason 0xFF
     uint8_t nackPayload[2] = { rxCmd, 0xFF };
     sendPacket(replyStream, 0x82, nackPayload, sizeof(nackPayload));
   }
 }
 
-// Byte-by-byte Framed Packet Parser
+// ===========================================================================
+// PACKET PARSER (byte-by-byte framed protocol)
+// ===========================================================================
 bool processPacketByte(uint8_t b, Stream &replyStream, uint8_t &rxState, uint8_t &rxCmd, uint8_t &rxLen, uint8_t *rxBuf, uint8_t &rxIdx) {
   if (rxState == 0) {
-    if (b == 0xAA) {
-      rxState = 1;
-      return true;
-    }
+    if (b == 0xAA) { rxState = 1; return true; }
     return false;
   } else if (rxState == 1) {
     if (b == 0x55) rxState = 2;
     else rxState = (b == 0xAA) ? 1 : 0;
     return true;
   } else if (rxState == 2) {
-    rxCmd = b;
-    rxState = 3;
-    return true;
+    rxCmd = b; rxState = 3; return true;
   } else if (rxState == 3) {
-    rxLen = b;
-    rxIdx = 0;
+    rxLen = b; rxIdx = 0;
     rxState = (rxLen == 0) ? 5 : 4;
     return true;
   } else if (rxState == 4) {
@@ -727,20 +686,17 @@ bool processPacketByte(uint8_t b, Stream &replyStream, uint8_t &rxState, uint8_t
   } else if (rxState == 5) {
     uint8_t expectedCrc = b;
     rxState = 0;
-
     uint8_t header[4] = { 0xAA, 0x55, rxCmd, rxLen };
     uint8_t calculatedCrc = calcCRC8(rxBuf, rxLen) ^ calcCRC8(header, 4);
-
     if (calculatedCrc == expectedCrc) {
       executeCommandPacket(replyStream, rxCmd, rxLen, rxBuf);
     } else {
-      // Send explicit NACK (0x82) for CRC mismatch
       uint8_t nackPayload[3] = { rxCmd, 0xEE, expectedCrc };
       sendPacket(replyStream, 0x82, nackPayload, sizeof(nackPayload));
       if (Serial) {
-        Serial.print("[STM32 UART] CRC Mismatch! Expected 0x");
+        Serial.print("[UART] CRC Mismatch! Exp=0x");
         Serial.print(expectedCrc, HEX);
-        Serial.print(", Calc 0x");
+        Serial.print(" Calc=0x");
         Serial.println(calculatedCrc, HEX);
       }
     }
@@ -754,13 +710,9 @@ void processEsp32Uart(void) {
   static uint8_t rxState = 0, rxCmd = 0, rxLen = 0, rxIdx = 0;
   static uint8_t rxBuf[128];
   static uint32_t lastByteTimeMs = 0;
-
-  // Watchdog timer: If a packet was started but interrupted/delayed > 35ms, reset state
   if (rxState > 0 && (millis() - lastByteTimeMs > 35)) {
-    rxState = 0;
-    rxIdx = 0;
+    rxState = 0; rxIdx = 0;
   }
-
   while (Serial1.available()) {
     lastByteTimeMs = millis();
     processPacketByte(Serial1.read(), Serial1, rxState, rxCmd, rxLen, rxBuf, rxIdx);
@@ -775,77 +727,63 @@ void processUsbCli(void) {
   static uint8_t cmdIdx = 0;
   static uint32_t lastUsbByteTimeMs = 0;
 
-  // Watchdog timer: If binary packet reception on USB stalled > 40ms, reset
   if (rxState > 0 && (millis() - lastUsbByteTimeMs > 40)) {
-    rxState = 0;
-    rxIdx = 0;
+    rxState = 0; rxIdx = 0;
   }
 
   while (Serial.available()) {
     lastUsbByteTimeMs = millis();
     uint8_t b = Serial.read();
 
-    // Check if input is a binary packet
     if (rxState > 0 || b == 0xAA) {
       processPacketByte(b, Serial, rxState, rxCmd, rxLen, rxBuf, rxIdx);
       continue;
     }
 
-    // Process ASCII line
     char c = (char)b;
     if (c == '\r' || c == '\n') {
       if (cmdIdx == 0) continue;
       cmdLine[cmdIdx] = '\0';
 
-      // Parse Command
       if (strcmp(cmdLine, "help") == 0) {
-        Serial.println("\n--- Function Generator 10000 CLI Commands (PA4 DAC1_OUT1) ---");
-        Serial.println("  status               : Print comprehensive hardware telemetry");
-        Serial.println("  wave <s/q/t/a/n/h/e> : Set wave (Sine, Square, Triangle, Saw, Noise, HW_Noise, Eqn)");
-        Serial.println("  freq <Hz>            : Set target frequency (1 Hz - 200,000 Hz)");
-        Serial.println("  amp <0-100>          : Set amplitude percentage");
-        Serial.println("  offset <-128..127>   : Set DC offset (-1.65V to +1.65V)");
-        Serial.println("  duty <1-99>          : Set PWM duty cycle percentage");
-        Serial.println("  eqn <formula>        : Compile equation (e.g. sin(t)+0.5*sin(3*t))");
-        Serial.println("  buf on / buf off     : Toggle internal DAC buffer (Mode 0 vs Mode 2 unbuffered)");
-        Serial.println("  dds on / dds off     : Toggle fixed 1.000 MSPS DDS phase accumulator engine");
-        Serial.println("  mode <dds/dyn>       : Set synthesis mode (dds = 1 MSPS DDS, dyn = dynamic fs)");
-        Serial.println("  mute / unmute        : Disable / Enable DAC output");
-        Serial.println("-------------------------------------------------------------\n");
+        Serial.println("\n--- Function Generator 10000 DDS CLI ---");
+        Serial.println("  status               : Hardware telemetry");
+        Serial.println("  wave <s/q/t/a/n/h/e> : Set waveform");
+        Serial.println("  freq <Hz>            : Set frequency (0.1 - 500k Hz)");
+        Serial.println("  amp <0-100>          : Set amplitude %");
+        Serial.println("  offset <-128..127>   : Set DC offset");
+        Serial.println("  duty <1-99>          : Set duty cycle %");
+        Serial.println("  eqn <formula>        : Compile equation");
+        Serial.println("  buf on / buf off     : Toggle DAC buffer");
+        Serial.println("  mute / unmute        : Toggle output");
+        Serial.println("----------------------------------------\n");
       } else if (strcmp(cmdLine, "status") == 0) {
-        Serial.println("\n--- Laboratory Hardware Telemetry (PA4 DAC1_OUT1) ---");
-        Serial.print("  Clock Source:   "); Serial.println(clockSourceStr);
-        Serial.print("  SYSCLK:         "); Serial.print((unsigned long)SystemCoreClock); Serial.println(" Hz");
-        Serial.print("  HAL SysClk:     "); Serial.print((unsigned long)HAL_RCC_GetSysClockFreq()); Serial.println(" Hz");
-        Serial.print("  HAL HCLK:       "); Serial.print((unsigned long)HAL_RCC_GetHCLKFreq()); Serial.println(" Hz");
-        Serial.print("  HAL PCLK1:      "); Serial.print((unsigned long)HAL_RCC_GetPCLK1Freq()); Serial.println(" Hz");
-        Serial.print("  Engine Mode:    "); Serial.println(ddsModeEnabled ? "FIXED 1.000 MSPS DDS (Phase Accumulator)" : "DYNAMIC FS (Hardware Slicing)");
-        Serial.print("  DAC Buffer:     "); Serial.println(dacBufferEnabled ? "ON (Mode 0: ~0.2V-3.1V)" : "OFF (Mode 2: 0.0V-3.3V Rail-to-Rail)");
-        Serial.print("  Target Freq:    "); Serial.print(ch1.freq, 2); Serial.println(" Hz");
-        Serial.print("  Actual Fout:    "); Serial.print((float)actualFout, 2); Serial.print(" Hz (Error: "); Serial.print(freqErrorPct, 3); Serial.println("%)");
-        Serial.print("  Sampling Rate:  "); Serial.print((float)(actualFs / 1000000.0), 3); Serial.print(" MSPS (ARR="); Serial.print((unsigned long)TIM6->ARR); Serial.print(", PSC="); Serial.print((unsigned long)TIM6->PSC); Serial.println(")");
-        Serial.print("  Table Slicing:  N="); Serial.print(currentSamplesPerCycle); Serial.print(" pts/cycle | R="); Serial.print(currentRepetitions); Serial.println(" repetitions");
-        Serial.print("  DWT Benchmark:  Last Compute = "); Serial.print(lastComputeTimeUs, 2); Serial.print(" us ("); Serial.print((unsigned long)lastComputeCycles); Serial.println(" cycles)");
-        Serial.print("  Waveform:       '"); Serial.print(ch1.wave); Serial.print("' | Amp="); Serial.print(ch1.amp); Serial.print("% | Offset="); Serial.print(ch1.offset); Serial.print(" | Duty="); Serial.print(ch1.duty); Serial.print("% | En="); Serial.println(ch1.enabled);
+        Serial.println("\n--- DDS Hardware Telemetry ---");
+        Serial.print("  Clock:       "); Serial.println(clockSourceStr);
+        Serial.print("  SYSCLK:      "); Serial.print((unsigned long)SystemCoreClock); Serial.println(" Hz");
+        Serial.print("  HCLK:        "); Serial.print((unsigned long)HAL_RCC_GetHCLKFreq()); Serial.println(" Hz");
+        Serial.print("  PCLK1:       "); Serial.print((unsigned long)HAL_RCC_GetPCLK1Freq()); Serial.println(" Hz");
+        Serial.println("  Sampling:    1.000 MSPS (Fixed TIM6 ARR=249 PSC=0)");
+        Serial.print("  DAC Buffer:  "); Serial.println(dacBufferEnabled ? "ON (Mode 0)" : "OFF (Mode 2)");
+        Serial.print("  Target Freq: "); Serial.print(ch1.freq, 2); Serial.println(" Hz");
+        Serial.print("  Actual Fout: "); Serial.print((float)actualFout, 4); Serial.print(" Hz (Err: "); Serial.print(freqErrorPct, 4); Serial.println("%)");
+        Serial.print("  Phase Inc:   "); Serial.print(phaseIncrement); Serial.print(" (0x"); Serial.print(phaseIncrement, HEX); Serial.println(")");
+        Serial.print("  Cycles/Buf:  "); Serial.print(numCyclesInBuf); Serial.print(" ("); Serial.print(currentSamplesPerCycle); Serial.println(" pts/cycle)");
+        Serial.print("  Wavetable:   "); Serial.print(WAVETABLE_SIZE); Serial.println(" points");
+        Serial.print("  DMA Buffer:  "); Serial.print(DMA_BUFFER_SAMPLES); Serial.println(" samples (circular, 16384 bytes)");
+        Serial.print("  Compute:     "); Serial.print(lastComputeTimeUs, 2); Serial.print(" us ("); Serial.print((unsigned long)lastComputeCycles); Serial.println(" cycles)");
+        Serial.print("  Waveform:    '"); Serial.print(ch1.wave); Serial.print("' | Amp="); Serial.print(ch1.amp); Serial.print("% | Offset="); Serial.print(ch1.offset); Serial.print(" | Duty="); Serial.print(ch1.duty); Serial.print("% | En="); Serial.println(ch1.enabled);
         if (ch1.wave == 'e') {
-          Serial.print("  Equation:       \""); Serial.print(ch1.mathExpr.exprStr); Serial.print("\" (Bytecode: "); Serial.print(ch1.mathExpr.bcLen); Serial.print(" B, NormScale: "); Serial.print(ch1.mathExpr.normScale, 3); Serial.println(")");
+          Serial.print("  Equation:    \""); Serial.print(ch1.mathExpr.exprStr); Serial.print("\" (BC: "); Serial.print(ch1.mathExpr.bcLen); Serial.println(" B)");
         }
-        Serial.print("  Packets RX:     "); Serial.print(totalPacketsReceived); Serial.print(" | Pings: "); Serial.println(totalPingsAnswered);
-        Serial.println("------------------------------------------------------\n");
+        Serial.print("  Packets:     "); Serial.print(totalPacketsReceived); Serial.print(" RX | "); Serial.print(totalPingsAnswered); Serial.print(" Pings | "); Serial.print(totalDmaUnderruns); Serial.println(" UDR");
+        Serial.println("----------------------------------------------\n");
       } else if (strcmp(cmdLine, "buf on") == 0 || strcmp(cmdLine, "buffer on") == 0) {
         applyDacBufferMode(true);
-        Serial.println("[OK] DAC Output Buffer: ENABLED (Mode 0: drive load down to 5k, swing ~0.2V to 3.1V)");
+        Serial.println("✔ DAC Buffer: ENABLED (Mode 0: ~0.2V-3.1V)");
       } else if (strcmp(cmdLine, "buf off") == 0 || strcmp(cmdLine, "buffer off") == 0) {
         applyDacBufferMode(false);
-        Serial.println("[OK] DAC Output Buffer: DISABLED (Mode 2: true 0.0V-3.3V rail-to-rail, ideal for external op-amp)");
-      } else if (strcmp(cmdLine, "dds on") == 0 || strcmp(cmdLine, "mode dds") == 0) {
-        ddsModeEnabled = true;
-        recomputeAndApplySynthesis();
-        Serial.println("[OK] Synthesis Engine: FIXED 1.000 MSPS DDS ENABLED (ARR=249, PSC=0 @ 250 MHz)");
-      } else if (strcmp(cmdLine, "dds off") == 0 || strcmp(cmdLine, "mode dyn") == 0) {
-        ddsModeEnabled = false;
-        recomputeAndApplySynthesis();
-        Serial.println("[OK] Synthesis Engine: DYNAMIC FS ENABLED (Hardware Timer Slicing)");
+        Serial.println("✔ DAC Buffer: DISABLED (Mode 2: 0.0V-3.3V)");
       } else if (strncmp(cmdLine, "eqn ", 4) == 0) {
         const char *formula = cmdLine + 4;
         if (strncmp(formula, "1 ", 2) == 0) formula += 2;
@@ -853,51 +791,52 @@ void processUsbCli(void) {
         if (compileMathExpression(formula, &ch1.mathExpr)) {
           ch1.wave = 'e';
           recomputeAndApplySynthesis();
-          Serial.print("[OK] Equation compiled: \""); Serial.print(formula); Serial.print("\" (Bytecode: "); Serial.print(ch1.mathExpr.bcLen); Serial.print(" B, NormScale: "); Serial.print(ch1.mathExpr.normScale, 3); Serial.println(")");
-          Serial.print("  Synthesized with N="); Serial.print(currentSamplesPerCycle); Serial.print(" points in "); Serial.print(lastComputeTimeUs, 1); Serial.print(" us ("); Serial.print((unsigned long)lastComputeCycles); Serial.println(" cycles)!");
+          Serial.print("✔ Equation: \""); Serial.print(formula); Serial.print("\" | "); Serial.print(lastComputeTimeUs, 1); Serial.println(" us");
         } else {
-          Serial.print("[ERROR] Syntax error in equation: "); Serial.println(formula);
+          Serial.print("✘ Syntax error: "); Serial.println(formula);
         }
       } else if (strncmp(cmdLine, "wave ", 5) == 0) {
-        char w = cmdLine[5];
-        ch1.wave = w;
+        ch1.wave = cmdLine[5];
         recomputeAndApplySynthesis();
-        Serial.print("[OK] Waveform set to: '"); Serial.print(w); Serial.println("'");
+        Serial.print("✔ Waveform: '"); Serial.print(ch1.wave); Serial.println("'");
       } else if (strncmp(cmdLine, "freq ", 5) == 0) {
         float f = strtof(cmdLine + 5, nullptr);
-        if (f >= 1.0f && f <= 500000.0f) {
+        if (f >= 0.1f && f <= 500000.0f) {
           ch1.freq = f;
           recomputeAndApplySynthesis();
-          Serial.print("[OK] Target: "); Serial.print(f, 2); Serial.print(" Hz | Actual: "); Serial.print((float)actualFout, 2); Serial.print(" Hz (Error: "); Serial.print(freqErrorPct, 3); Serial.print("%) | fs: "); Serial.print((float)(actualFs / 1000000.0), 3); Serial.print(" MSPS (N="); Serial.print(currentSamplesPerCycle); Serial.println(")");
+          Serial.print("✔ Freq: "); Serial.print(f, 2);
+          Serial.print(" Hz -> Act: "); Serial.print((float)actualFout, 4);
+          Serial.print(" Hz (Err: "); Serial.print(freqErrorPct, 4);
+          Serial.print("%) | "); Serial.print(currentSamplesPerCycle);
+          Serial.print(" pts x "); Serial.print(numCyclesInBuf);
+          Serial.println(" cyc");
         }
       } else if (strncmp(cmdLine, "amp ", 4) == 0) {
-        int a = atoi(cmdLine + 4);
-        ch1.amp = constrain(a, 0, 100);
+        ch1.amp = constrain(atoi(cmdLine + 4), 0, 100);
         recomputeAndApplySynthesis();
-        Serial.print("[OK] Amplitude set to: "); Serial.print(ch1.amp); Serial.println("%");
+        Serial.print("✔ Amplitude: "); Serial.print(ch1.amp); Serial.println("%");
       } else if (strncmp(cmdLine, "offset ", 7) == 0) {
-        int o = atoi(cmdLine + 7);
-        ch1.offset = constrain(o, -128, 127);
+        ch1.offset = constrain(atoi(cmdLine + 7), -128, 127);
         recomputeAndApplySynthesis();
-        Serial.print("[OK] Offset set to: "); Serial.println(ch1.offset);
+        Serial.print("✔ Offset: "); Serial.println(ch1.offset);
       } else if (strncmp(cmdLine, "duty ", 5) == 0) {
-        int d = atoi(cmdLine + 5);
-        ch1.duty = constrain(d, 1, 99);
+        ch1.duty = constrain(atoi(cmdLine + 5), 1, 99);
         recomputeAndApplySynthesis();
-        Serial.print("[OK] Duty cycle set to: "); Serial.print(ch1.duty); Serial.println("%");
+        Serial.print("✔ Duty: "); Serial.print(ch1.duty); Serial.println("%");
       } else if (strncmp(cmdLine, "ch1 ", 4) == 0) {
         char w; uint32_t f; int a;
         if (sscanf(cmdLine + 4, " %c %lu %d", &w, &f, &a) == 3) {
           ch1.wave = w; ch1.freq = (float)f; ch1.amp = constrain(a, 0, 100); ch1.enabled = true;
           recomputeAndApplySynthesis();
-          Serial.print("[OK] CH1: Wave="); Serial.print(w); Serial.print(", Freq="); Serial.print(f); Serial.print(" Hz, Amp="); Serial.print(a); Serial.print("% | Actual="); Serial.print((float)actualFout, 2); Serial.print(" Hz, N="); Serial.print(currentSamplesPerCycle); Serial.println(" pts");
+          Serial.print("✔ CH1: "); Serial.print(w); Serial.print(" @ "); Serial.print(f);
+          Serial.print(" Hz -> Act="); Serial.print((float)actualFout, 2); Serial.println(" Hz");
         }
       } else if (strcmp(cmdLine, "mute") == 0 || strcmp(cmdLine, "mute 1") == 0) {
-        ch1.enabled = false; recomputeAndApplySynthesis(); Serial.println("DAC Output Muted (DC Midpoint)");
+        ch1.enabled = false; recomputeAndApplySynthesis(); Serial.println("Output Muted");
       } else if (strcmp(cmdLine, "unmute") == 0 || strcmp(cmdLine, "unmute 1") == 0) {
-        ch1.enabled = true; recomputeAndApplySynthesis(); Serial.println("DAC Output Unmuted");
+        ch1.enabled = true; recomputeAndApplySynthesis(); Serial.println("Output Unmuted");
       } else {
-        Serial.println("Unknown command. Type 'help' for available commands.");
+        Serial.println("Unknown command. Type 'help'.");
       }
 
       cmdIdx = 0;
@@ -909,33 +848,36 @@ void processUsbCli(void) {
   }
 }
 
-// --- MAIN LOOP ---
+// ===========================================================================
+// MAIN LOOP
+// ===========================================================================
 void loop() {
-  // 1. Service UART commands from ESP32 BLE Gateway
+  // 1. Service ESP32 BLE Gateway
   processEsp32Uart();
 
-  // 2. Service interactive CLI commands from ST-Link USB
+  // 2. Service USB CLI
   processUsbCli();
 
-  // 3. Periodic heartbeat / telemetry to USB monitor every 1 second
+  // 3. Heartbeat every 1 second
   static uint32_t lastPrintSec = 0;
   uint32_t nowSec = millis() / 1000;
   if (nowSec != lastPrintSec) {
     lastPrintSec = nowSec;
-
-    Serial.print("[RUNNING] T=");
+    Serial.print("[DDS] T=");
     Serial.print(nowSec);
-    Serial.print(" s | PA4 (DAC): ");
+    Serial.print("s | ");
     Serial.print(ch1.wave);
     Serial.print(" @ ");
     Serial.print((uint32_t)ch1.freq);
     Serial.print(" Hz | Act: ");
     Serial.print((float)actualFout, 2);
-    Serial.print(" Hz | Mode: ");
-    Serial.print(ddsModeEnabled ? "DDS_1M" : "DYN_FS");
-    Serial.print(" | Health: 0x");
+    Serial.print(" Hz | 1.000 MSPS | ");
+    Serial.print(numCyclesInBuf);
+    Serial.print("cyc x ");
+    Serial.print(currentSamplesPerCycle);
+    Serial.print("pts | H:0x");
     Serial.print(getSamplingHealthByte(), HEX);
-    Serial.print(" | UDR: ");
+    Serial.print(" | UDR:");
     Serial.print(totalDmaUnderruns);
     Serial.print(" | DOR1=");
     Serial.print(DAC1->DOR1);
