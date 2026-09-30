@@ -451,22 +451,33 @@
       border-color: var(--white);
       box-shadow: 0 0 12px rgba(255, 255, 255, 0.15);
     }
+    .equation-actions-bar {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      margin-top: 4px;
+    }
     .btn-compile-eqn {
       background: var(--white);
       color: #000;
-      border: none;
-      border-radius: var(--radius-md);
-      padding: 0 18px;
+      border: 1px solid var(--white);
+      border-radius: var(--radius-pill);
+      padding: 8px 24px;
       font-family: var(--font-ndot);
       font-size: 11px;
       letter-spacing: 1.5px;
       font-weight: 700;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 4px 14px rgba(255, 255, 255, 0.12);
     }
     .btn-compile-eqn:hover {
-      background: #e0e0e0;
-      transform: scale(1.02);
+      background: #e6e6e6;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(255, 255, 255, 0.25);
+    }
+    .btn-compile-eqn:active {
+      transform: scale(0.98);
     }
     .equation-presets-chips {
       display: flex;
@@ -608,35 +619,9 @@
       color: #888;
     }
 
-    /* Toast Notification */
+    /* Toast Notification (Disabled) */
     .toast-container {
-      position: fixed;
-      bottom: 24px;
-      right: 24px;
-      z-index: 3000;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      pointer-events: none;
-    }
-    .toast {
-      background: rgba(18, 18, 18, 0.95);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      backdrop-filter: blur(12px);
-      padding: 10px 18px;
-      border-radius: var(--radius-pill);
-      font-family: var(--font-mono);
-      font-size: 12px;
-      color: #fff;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      animation: toast-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-    }
-    @keyframes toast-in {
-      from { transform: translateY(12px); opacity: 0; }
-      to { transform: translateY(0); opacity: 1; }
+      display: none !important;
     }
   </style>
 </head>
@@ -766,7 +751,6 @@
 
         <div class="equation-input-wrap">
           <input type="text" class="equation-input" id="inputEquation" value="sin(t) + 0.5*sin(3*t)" placeholder="e.g. sin(t) + 0.3*sin(5*t)">
-          <button class="btn-compile-eqn" id="btnCompileEqn">SEND TO STM32</button>
         </div>
 
         <div class="equation-presets-chips">
@@ -779,6 +763,10 @@
         </div>
 
         <canvas class="eqn-preview-canvas" id="eqnPreviewCanvas"></canvas>
+
+        <div class="equation-actions-bar">
+          <button class="btn-compile-eqn" id="btnCompileEqn">SEND TO STM32</button>
+        </div>
       </div>
 
       <!-- AWG Touch Waveform Sculptor Bento -->
@@ -1368,18 +1356,9 @@
     window.addEventListener('touchmove', (e) => { if (isDrawingAwg) handleAwgPointer(e); }, { passive: true });
     window.addEventListener('touchend', () => { isDrawingAwg = false; lastAwgIdx = -1; });
 
-    // --- TOAST MANAGER ---
+    // --- TOAST MANAGER (DISABLED) ---
     function showToast(msg) {
-      const container = document.getElementById("toastContainer");
-      const toast = document.createElement("div");
-      toast.className = "toast";
-      toast.innerHTML = `<span class="brand-red-dot" style="width:6px; height:6px;"></span> ${msg}`;
-      container.appendChild(toast);
-      setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transform = 'translateY(10px)';
-        setTimeout(() => toast.remove(), 300);
-      }, 3200);
+      // Notifications disabled per user request
     }
 
     // --- EVENT LISTENERS & WIRING ---
