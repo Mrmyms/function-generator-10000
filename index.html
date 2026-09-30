@@ -1,0 +1,1618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FUNC_GEN (1) | Nothing OS Laboratory Synthesizer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* ==========================================================================
+       NOTHING OS (R) DESIGN SYSTEM - FUNCTION GENERATOR (1)
+       Pure Void Black, Dot-Matrix Typography, Smoky Acrylic, Iconic Nothing Red
+       ========================================================================== */
+    :root {
+      --bg: #000000;
+      --card-bg: #0c0c0c;
+      --card-subtle: #141414;
+      --card-elevated: #1a1a1a;
+      --card-border: rgba(255, 255, 255, 0.12);
+      --card-border-hover: rgba(255, 255, 255, 0.28);
+      --card-border-active: rgba(255, 255, 255, 0.6);
+      
+      --text: #f0f0f0;
+      --text-muted: #888888;
+      --text-dim: #4a4a4a;
+      
+      /* Iconic Nothing Red */
+      --red: #d71921;
+      --red-glow: rgba(215, 25, 33, 0.45);
+      --red-subtle: rgba(215, 25, 33, 0.15);
+      
+      /* Monochrome High-Contrast Accents */
+      --white: #ffffff;
+      --white-glow: rgba(255, 255, 255, 0.65);
+      --white-subtle: rgba(255, 255, 255, 0.08);
+      
+      --radius-sm: 8px;
+      --radius-md: 16px;
+      --radius-lg: 24px;
+      --radius-xl: 32px;
+      --radius-pill: 9999px;
+      
+      --font-ndot: 'Silkscreen', monospace;
+      --font-body: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+      background-image: 
+        radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.03) 0%, transparent 65%),
+        radial-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+      background-size: 100% 100%, 24px 24px;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #080808; }
+    ::-webkit-scrollbar-thumb { background: #252525; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #3d3d3d; }
+
+    /* Dot Matrix Utilities */
+    .ndot {
+      font-family: var(--font-ndot);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+    
+    .tech-mono {
+      font-family: var(--font-mono);
+    }
+
+    /* Top Bar Header */
+    header {
+      background: rgba(12, 12, 12, 0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--card-border);
+      padding: 14px 28px;
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .brand-mark {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-title {
+      font-family: var(--font-ndot);
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: var(--white);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .brand-red-dot {
+      width: 9px;
+      height: 9px;
+      background: var(--red);
+      border-radius: 50%;
+      display: inline-block;
+      box-shadow: 0 0 10px var(--red-glow);
+      animation: pulse-red 2.4s ease-in-out infinite;
+    }
+
+    @keyframes pulse-red {
+      0%, 100% { transform: scale(1); opacity: 0.9; }
+      50% { transform: scale(1.25); opacity: 1; box-shadow: 0 0 16px var(--red); }
+    }
+
+    .brand-sub {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+      letter-spacing: 0.5px;
+      padding-left: 8px;
+      border-left: 1px solid var(--card-border);
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    /* Connect BLE Pill Button */
+    .btn-ble-connect {
+      background: #ffffff;
+      color: #000000;
+      border: 1px solid #ffffff;
+      border-radius: var(--radius-pill);
+      padding: 8px 20px;
+      font-family: var(--font-ndot);
+      font-size: 12px;
+      letter-spacing: 1.5px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 4px 18px rgba(255, 255, 255, 0.15);
+    }
+    .btn-ble-connect:hover {
+      background: #e6e6e6;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 24px rgba(255, 255, 255, 0.28);
+    }
+    .btn-ble-connect:active {
+      transform: scale(0.97);
+    }
+    .btn-ble-connect.connected {
+      background: var(--card-subtle);
+      color: var(--text);
+      border-color: var(--card-border);
+      box-shadow: none;
+    }
+
+    .ble-status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--red);
+      transition: all 0.3s ease;
+    }
+    .ble-status-dot.connected {
+      background: #00ff66;
+      box-shadow: 0 0 10px rgba(0, 255, 102, 0.7);
+    }
+
+    /* Main Container Bento Grid */
+    main {
+      flex: 1;
+      padding: 24px 28px;
+      max-width: 1540px;
+      width: 100%;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* Bento Card Base */
+    .bento-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-lg);
+      padding: 22px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.25s ease;
+    }
+    .bento-card:hover {
+      border-color: var(--card-border-hover);
+    }
+
+    .bento-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .bento-title {
+      font-family: var(--font-ndot);
+      font-size: 13px;
+      letter-spacing: 1.5px;
+      color: var(--white);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .bento-tag {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+      background: var(--card-subtle);
+      padding: 3px 9px;
+      border-radius: var(--radius-pill);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+
+
+    /* Waveform Selector Bento (Pill Buttons with Dot Matrix Icons) */
+    .waveforms-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 10px;
+    }
+    .wave-pill-btn {
+      background: var(--card-subtle);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-md);
+      padding: 14px 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
+      overflow: hidden;
+    }
+    .wave-pill-btn:hover {
+      border-color: var(--card-border-hover);
+      background: #181818;
+      transform: translateY(-2px);
+    }
+    .wave-pill-btn.active {
+      background: #ffffff;
+      border-color: #ffffff;
+      color: #000000;
+      box-shadow: 0 6px 20px rgba(255, 255, 255, 0.18);
+    }
+    .wave-pill-btn.active .wave-symbol {
+      color: #000000;
+    }
+    .wave-pill-btn.active .wave-name {
+      color: #000000;
+      font-weight: 700;
+    }
+    .wave-symbol {
+      font-size: 20px;
+      line-height: 1;
+      color: var(--text-muted);
+      transition: color 0.15s;
+    }
+    .wave-name {
+      font-family: var(--font-ndot);
+      font-size: 11px;
+      letter-spacing: 1px;
+      color: var(--text);
+    }
+
+    /* Middle Row: Parameter Bento Controls */
+    .params-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+    @media (max-width: 960px) {
+      .params-grid { grid-template-columns: 1fr; }
+    }
+
+    /* Rotary & Parameter Cards */
+    .param-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: 20px 16px;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-lg);
+      position: relative;
+    }
+
+    .param-header {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .param-label {
+      font-family: var(--font-ndot);
+      font-size: 11px;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+    }
+
+    .param-display-box {
+      background: #060606;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: var(--radius-md);
+      padding: 10px 14px;
+      width: 100%;
+      margin-bottom: 16px;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+    .param-display-box:hover {
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+    .param-main-val {
+      font-family: var(--font-ndot);
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--white);
+      letter-spacing: 2px;
+      line-height: 1.1;
+    }
+    .param-sub-val {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* Range Sliders with Nothing Style Ticks */
+    .nothing-slider {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      background: #1f1f1f;
+      outline: none;
+      margin: 14px 0 8px 0;
+      cursor: pointer;
+    }
+    .nothing-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #ffffff;
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+      transition: transform 0.1s ease;
+    }
+    .nothing-slider::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+    .nothing-slider.slider-red::-webkit-slider-thumb {
+      background: var(--red);
+      box-shadow: 0 0 12px var(--red-glow);
+    }
+
+    .decade-btn-group {
+      display: flex;
+      gap: 4px;
+      width: 100%;
+      margin-top: 10px;
+    }
+    .decade-btn {
+      flex: 1;
+      background: var(--card-subtle);
+      border: 1px solid var(--card-border);
+      border-radius: 6px;
+      padding: 6px 0;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .decade-btn:hover { color: #fff; border-color: #fff; }
+    .decade-btn.active {
+      background: #ffffff;
+      color: #000000;
+      font-weight: 700;
+      border-color: #ffffff;
+    }
+
+    /* Lower Grid: Equation Lab + AWG Touch Pad + Telemetry & Presets */
+    .lower-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 20px;
+    }
+    @media (max-width: 980px) {
+      .lower-grid { grid-template-columns: 1fr; }
+    }
+
+    /* Math Equation Studio Bento Card */
+    .equation-card {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .equation-input-wrap {
+      display: flex;
+      gap: 10px;
+    }
+    .equation-input {
+      flex: 1;
+      background: #050505;
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-md);
+      padding: 12px 16px;
+      font-family: var(--font-mono);
+      font-size: 14px;
+      color: #ffffff;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .equation-input:focus {
+      border-color: var(--white);
+      box-shadow: 0 0 12px rgba(255, 255, 255, 0.15);
+    }
+    .btn-compile-eqn {
+      background: var(--white);
+      color: #000;
+      border: none;
+      border-radius: var(--radius-md);
+      padding: 0 18px;
+      font-family: var(--font-ndot);
+      font-size: 11px;
+      letter-spacing: 1.5px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-compile-eqn:hover {
+      background: #e0e0e0;
+      transform: scale(1.02);
+    }
+    .equation-presets-chips {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .eqn-chip {
+      background: var(--card-subtle);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-pill);
+      padding: 5px 12px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .eqn-chip:hover {
+      color: #fff;
+      border-color: #fff;
+      background: #1a1a1a;
+    }
+    .eqn-preview-canvas {
+      width: 100%;
+      height: 90px;
+      background: #050505;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: var(--radius-sm);
+    }
+
+    /* AWG Touch Sculptor Bento Card */
+    .awg-card {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .awg-canvas-container {
+      position: relative;
+      background: #040404;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: var(--radius-md);
+      height: 120px;
+      cursor: crosshair;
+    }
+    #awgCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .awg-actions-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .btn-awg-action {
+      background: var(--card-subtle);
+      border: 1px solid var(--card-border);
+      color: var(--text);
+      font-family: var(--font-ndot);
+      font-size: 10px;
+      padding: 6px 14px;
+      border-radius: var(--radius-pill);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-awg-action:hover {
+      border-color: #fff;
+      color: #fff;
+    }
+    .btn-awg-action.primary {
+      background: #fff;
+      color: #000;
+      font-weight: 700;
+      border-color: #fff;
+    }
+
+    /* Modal Numeric Input */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(12px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+    }
+    .modal-card {
+      background: #0e0e0e;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: var(--radius-xl);
+      padding: 28px;
+      width: 90%;
+      max-width: 360px;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.9);
+    }
+    .modal-title {
+      font-family: var(--font-ndot);
+      font-size: 14px;
+      color: var(--white);
+      letter-spacing: 2px;
+      margin-bottom: 16px;
+    }
+    .modal-input {
+      width: 100%;
+      background: #000;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: var(--radius-md);
+      padding: 14px;
+      font-family: var(--font-ndot);
+      font-size: 24px;
+      color: #fff;
+      text-align: center;
+      outline: none;
+      margin-bottom: 20px;
+    }
+    .modal-btn-row {
+      display: flex;
+      gap: 10px;
+    }
+    .modal-btn {
+      flex: 1;
+      padding: 12px;
+      border-radius: var(--radius-pill);
+      font-family: var(--font-ndot);
+      font-size: 11px;
+      letter-spacing: 1px;
+      cursor: pointer;
+      border: none;
+    }
+    .modal-btn.confirm {
+      background: #fff;
+      color: #000;
+      font-weight: 700;
+    }
+    .modal-btn.cancel {
+      background: #1f1f1f;
+      color: #888;
+    }
+
+    /* Toast Notification */
+    .toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 3000;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+    }
+    .toast {
+      background: rgba(18, 18, 18, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(12px);
+      padding: 10px 18px;
+      border-radius: var(--radius-pill);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: #fff;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      animation: toast-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    @keyframes toast-in {
+      from { transform: translateY(12px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Header Navigation Bar -->
+  <header>
+    <div class="header-controls">
+      <!-- Web Bluetooth Connect Button -->
+      <button class="btn-ble-connect" id="btnBleConnect">
+        <span class="ble-status-dot" id="bleStatusDot"></span>
+        <span id="btnBleText">PAIR BLE</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Bento Grid Container -->
+  <main>
+
+    <!-- Waveform Selector Bento -->
+    <section class="bento-card">
+      <div class="bento-header">
+        <div class="bento-title">WAVEFORM</div>
+      </div>
+
+      <div class="waveforms-grid">
+        <div class="wave-pill-btn active" data-wave="s">
+          <span class="wave-symbol">∿</span>
+          <span class="wave-name">SINE</span>
+        </div>
+        <div class="wave-pill-btn" data-wave="q">
+          <span class="wave-symbol">⊓</span>
+          <span class="wave-name">SQUARE</span>
+        </div>
+        <div class="wave-pill-btn" data-wave="t">
+          <span class="wave-symbol">∧</span>
+          <span class="wave-name">TRIANGLE</span>
+        </div>
+        <div class="wave-pill-btn" data-wave="a">
+          <span class="wave-symbol">◿</span>
+          <span class="wave-name">SAWTOOTH</span>
+        </div>
+        <div class="wave-pill-btn" data-wave="p">
+          <span class="wave-symbol">⊓%</span>
+          <span class="wave-name">PWM</span>
+        </div>
+        <div class="wave-pill-btn" data-wave="n">
+          <span class="wave-symbol">⁙</span>
+          <span class="wave-name">NOISE</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Parameter Dials & Sliders (Frequency, Amplitude, Offset, DAC Buffer) -->
+    <section class="params-grid">
+      <!-- Frequency Module -->
+      <div class="param-card">
+        <div class="param-header">
+          <span class="param-label">FREQUENCY</span>
+        </div>
+
+        <div class="param-display-box" id="boxFreq" title="Click to enter exact value directly">
+          <div class="param-main-val" id="dispFreqVal">1,000</div>
+          <div class="param-sub-val" id="dispFreqSub">1.0000 kHz // ACT: 1000.58 Hz</div>
+        </div>
+
+        <input type="range" class="nothing-slider slider-red" id="sliderFreq" min="1000" max="10000" value="1000" step="50">
+
+        <div class="decade-btn-group">
+          <button class="decade-btn" data-min="1" data-max="100" data-step="1">1-100</button>
+          <button class="decade-btn" data-min="100" data-max="1000" data-step="5">100-1k</button>
+          <button class="decade-btn active" data-min="1000" data-max="10000" data-step="50">1k-10k</button>
+          <button class="decade-btn" data-min="10000" data-max="50000" data-step="250">10k-50k</button>
+          <button class="decade-btn" data-min="50000" data-max="128000" data-step="1000">50k-128k</button>
+        </div>
+      </div>
+
+      <!-- Amplitude Module -->
+      <div class="param-card">
+        <div class="param-header">
+          <span class="param-label">AMPLITUDE</span>
+        </div>
+
+        <div class="param-display-box" id="boxAmp" title="Click to enter exact value directly" style="cursor: pointer;">
+          <div class="param-main-val" id="dispAmpVal">100%</div>
+          <div class="param-sub-val" id="dispAmpSub">3.30 Vpp // 1.16 Vrms</div>
+        </div>
+
+        <input type="range" class="nothing-slider" id="sliderAmp" min="0" max="100" value="100" step="1">
+
+        <div class="decade-btn-group">
+          <button class="decade-btn" data-amp="25">25%</button>
+          <button class="decade-btn" data-amp="50">50%</button>
+          <button class="decade-btn" data-amp="75">75%</button>
+          <button class="decade-btn active" data-amp="100">100%</button>
+        </div>
+      </div>
+
+      <!-- DC Offset / PWM Duty Module -->
+      <div class="param-card">
+        <div class="param-header">
+          <span class="param-label" id="labelOffsetOrDuty">DC OFFSET</span>
+        </div>
+
+        <div class="param-display-box" id="boxOffset" title="Click to enter exact value directly" style="cursor: pointer;">
+          <div class="param-main-val" id="dispOffsetVal">0.00 V</div>
+          <div class="param-sub-val" id="dispOffsetSub">BIAS: +1.65 V REF (MID)</div>
+        </div>
+
+        <input type="range" class="nothing-slider" id="sliderOffset" min="-128" max="127" value="0" step="1">
+
+        <div class="decade-btn-group" id="groupOffsetQuick">
+          <button class="decade-btn" data-off="-64">-0.8V</button>
+          <button class="decade-btn active" data-off="0">0.0V</button>
+          <button class="decade-btn" data-off="64">+0.8V</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Math Equation Studio + Custom AWG Touch Pad -->
+    <section class="lower-grid">
+      <!-- Equation Studio Bento -->
+      <div class="bento-card equation-card">
+        <div class="bento-header">
+          <div class="bento-title">EQUATION STUDIO</div>
+        </div>
+
+        <div class="equation-input-wrap">
+          <input type="text" class="equation-input" id="inputEquation" value="sin(t) + 0.5*sin(3*t)" placeholder="e.g. sin(t) + 0.3*sin(5*t)">
+          <button class="btn-compile-eqn" id="btnCompileEqn">SEND TO STM32</button>
+        </div>
+
+        <div class="equation-presets-chips">
+          <span class="eqn-chip" data-formula="sin(t) + 0.5*sin(3*t)">Square Approx</span>
+          <span class="eqn-chip" data-formula="sinc(t)">Sinc Pulse</span>
+          <span class="eqn-chip" data-formula="exp(-t/2) * sin(6*t)">Damped Osc</span>
+          <span class="eqn-chip" data-formula="abs(sin(t))">Rectified Sine</span>
+          <span class="eqn-chip" data-formula="sin(t^1.4)">Chirp Sweep</span>
+          <span class="eqn-chip" data-formula="sin(t) * (1 + 0.5*sin(4*t))">AM Modulation</span>
+        </div>
+
+        <canvas class="eqn-preview-canvas" id="eqnPreviewCanvas"></canvas>
+      </div>
+
+      <!-- AWG Touch Waveform Sculptor Bento -->
+      <div class="bento-card awg-card">
+        <div class="bento-header">
+          <div class="bento-title">AWG DRAW</div>
+        </div>
+
+        <div class="awg-canvas-container">
+          <canvas id="awgCanvas"></canvas>
+        </div>
+
+        <div class="awg-actions-bar">
+          <button class="btn-awg-action" id="btnAwgClear">CLEAR</button>
+          <button class="btn-awg-action" id="btnAwgSmooth">SMOOTH</button>
+          <button class="btn-awg-action primary" id="btnAwgSend">SEND TO STM32</button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Numeric Input Modal -->
+  <div class="modal-backdrop" id="modalBackdrop">
+    <div class="modal-card">
+      <div class="modal-title" id="modalTitle">ENTER FREQUENCY (HZ)</div>
+      <input type="number" class="modal-input" id="modalInput" autofocus>
+      <div class="modal-btn-row">
+        <button class="modal-btn cancel" id="btnModalCancel">CANCEL</button>
+        <button class="modal-btn confirm" id="btnModalConfirm">SET</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Floating Toast Notifications -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Application Logic -->
+  <script>
+    /* ==========================================================================
+       FUNCTION GENERATOR 10000 - NOTHING OS WEB APPLICATION CONTROLLER
+       ========================================================================== */
+
+    // --- SOUND SYNTHESIS ENGINE (TACTILE HAPTIC CLICKS) ---
+    class AudioHaptics {
+      constructor() {
+        this.ctx = null;
+        this.enabled = true;
+      }
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (AudioContext) this.ctx = new AudioContext();
+        }
+      }
+      click(freq = 1200, dur = 0.015, gain = 0.08) {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx || this.ctx.state !== 'running') return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const g = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(freq * 0.3, this.ctx.currentTime + dur);
+          g.gain.setValueAtTime(gain, this.ctx.currentTime);
+          g.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + dur);
+          osc.connect(g);
+          g.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + dur);
+        } catch(e) {}
+      }
+      thump() { this.click(320, 0.035, 0.12); }
+      tick() { this.click(2400, 0.008, 0.05); }
+    }
+    const haptics = new AudioHaptics();
+
+    // --- CRC8 CALCULATION (POLYNOMIAL 0x07) ---
+    function calcCRC8(data) {
+      let crc = 0;
+      for (let i = 0; i < data.length; i++) {
+        crc ^= data[i];
+        for (let j = 0; j < 8; j++) {
+          crc = (crc & 0x80) ? (crc << 1) ^ 0x07 : (crc << 1);
+          crc &= 0xFF;
+        }
+      }
+      return crc;
+    }
+
+    // Build framed binary packet [0xAA, 0x55, cmd, len, payload..., crc]
+    function buildPacket(cmd, payloadArray = []) {
+      const len = payloadArray.length;
+      const header = [0xAA, 0x55, cmd, len];
+      const payloadCrc = calcCRC8(new Uint8Array(payloadArray));
+      const headerCrc = calcCRC8(new Uint8Array(header));
+      const finalCrc = (payloadCrc ^ headerCrc) & 0xFF;
+      return new Uint8Array([...header, ...payloadArray, finalCrc]);
+    }
+
+    // --- APPLICATION STATE ---
+    const state = {
+      connected: false,
+      armed: true,
+      waveform: 's',          // 's','q','t','a','p','n','h','c','e'
+      frequency: 1000.0,      // Hz
+      amplitude: 100,         // %
+      offset: 0,              // -128..127 (-1.65V..+1.65V)
+      dutyCycle: 50,          // 1..99%
+      dacBufferEnabled: true, // true=Mode 0, false=Mode 2
+      equationStr: "sin(t) + 0.5*sin(3*t)",
+      awgSamples: new Uint8Array(64).fill(128),
+      
+      // Hardware Telemetry
+      rttUs: 820,
+      actualFout: 1000.00,
+      freqErrorPct: 0.001,
+      samplingRateMsps: 2.049
+    };
+
+    // Initialize Default Sinc AWG pattern
+    for (let i = 0; i < 64; i++) {
+      const x = (i - 32) * 0.35;
+      const sinc = x === 0 ? 1 : Math.sin(x) / x;
+      state.awgSamples[i] = Math.max(0, Math.min(255, Math.round(128 + 120 * sinc)));
+    }
+
+    // --- WEB BLUETOOTH SERVICE MANAGER ---
+    const BLE_SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
+    const CHAR_CMD_UUID    = "beb5483e-36e1-4688-b7f5-ea07361b26a8";
+    const CHAR_TELEM_UUID  = "1c95d5e3-d8f7-413a-bf3d-7a2e5d7be87e";
+
+    let bleDevice = null;
+    let bleServer = null;
+    let cmdCharacteristic = null;
+    let telemCharacteristic = null;
+
+    async function connectBluetooth() {
+      if (!navigator.bluetooth) {
+        showToast("Web Bluetooth not supported. Use Chrome or Edge over HTTPS/localhost.");
+        return;
+      }
+      try {
+        haptics.click(1600, 0.02);
+        showToast("Scanning for 'FuncGen-10000'...");
+        
+        bleDevice = await navigator.bluetooth.requestDevice({
+          filters: [{ name: "FuncGen-10000" }],
+          optionalServices: [BLE_SERVICE_UUID]
+        });
+
+        bleDevice.addEventListener('gattserverdisconnected', onDisconnected);
+        showToast("Pairing with ESP32 GATT server...");
+        
+        bleServer = await bleDevice.gatt.connect();
+        const service = await bleServer.getPrimaryService(BLE_SERVICE_UUID);
+        
+        cmdCharacteristic = await service.getCharacteristic(CHAR_CMD_UUID);
+        telemCharacteristic = await service.getCharacteristic(CHAR_TELEM_UUID);
+
+        await telemCharacteristic.startNotifications();
+        telemCharacteristic.addEventListener('characteristicvaluechanged', onTelemetryNotification);
+
+        setConnectedUI(true);
+        showToast("CONNECTED // Hardware Synthesizer Ready");
+        haptics.thump();
+
+        // Push full state sync to STM32
+        sendFullConfiguration();
+      } catch (err) {
+        console.error("BLE Error:", err);
+        setConnectedUI(false);
+        showToast("Connection cancelled or failed: " + err.message);
+      }
+    }
+
+    function onDisconnected() {
+      setConnectedUI(false);
+      showToast("BLE Disconnected. Re-advertising...");
+      haptics.thump();
+    }
+
+    function setConnectedUI(isConnected) {
+      state.connected = isConnected;
+      const btn = document.getElementById("btnBleConnect");
+      const dot = document.getElementById("bleStatusDot");
+      const text = document.getElementById("btnBleText");
+      if (isConnected) {
+        btn.classList.add("connected");
+        dot.classList.add("connected");
+        if (text) text.innerText = "CONNECTED";
+      } else {
+        btn.classList.remove("connected");
+        dot.classList.remove("connected");
+        if (text) text.innerText = "PAIR BLE";
+      }
+    }
+
+    let bleSendPending = false;
+    let bleNextPacket = null;
+
+    async function sendBleRaw(bytes) {
+      if (!cmdCharacteristic) return;
+      if (bleSendPending) {
+        bleNextPacket = bytes; // Buffer latest configuration
+        return;
+      }
+      bleSendPending = true;
+      try {
+        await cmdCharacteristic.writeValueWithoutResponse(bytes);
+      } catch (e) {
+        try {
+          await cmdCharacteristic.writeValue(bytes);
+        } catch (err) {
+          console.warn("Write error:", err);
+        }
+      } finally {
+        bleSendPending = false;
+        if (bleNextPacket) {
+          const next = bleNextPacket;
+          bleNextPacket = null;
+          setTimeout(() => sendBleRaw(next), 25);
+        }
+      }
+    }
+
+    // Telemetry & Hardware ACK packet receiver
+    function onTelemetryNotification(event) {
+      const v = event.target.value;
+      if (!v || v.byteLength < 1) return;
+      const cmd = v.getUint8(0);
+
+      // 0x80: Periodic Telemetry
+      if (cmd === 0x80 && v.byteLength >= 8) {
+        const stmConnected = v.getUint8(2) !== 0;
+        const rtt = v.getUint32(3, true);
+        state.rttUs = rtt;
+      }
+      // 0x81: Hardware ACK Confirmation with Sampling Metrics
+      else if (cmd === 0x81 && v.byteLength >= 2) {
+        const ackedCmd = v.getUint8(1);
+        if (ackedCmd === 0x01 || ackedCmd === 0x05) {
+          if (v.byteLength >= 11) {
+            const health = v.getUint8(2);
+            const underruns = v.getUint8(3);
+            const nPts = v.getUint16(4, true);
+            const actFreq = v.getUint32(6, true);
+            const waveChar = v.byteLength >= 11 ? String.fromCharCode(v.getUint8(10)) : '';
+
+
+
+            const waveNames = { 's': 'SINE', 'q': 'SQUARE', 't': 'TRIANGLE', 'a': 'SAWTOOTH', 'n': 'NOISE', 'c': 'AWG', 'e': 'EQUATION' };
+            const waveTitle = waveNames[waveChar.toLowerCase()] || waveChar.toUpperCase();
+            showToast(`✔ CONFIRMED: ${waveTitle} @ ${actFreq.toLocaleString()} Hz // DMA Active`);
+          } else {
+            showToast(`✔ CONFIRMED: Parameter updated by STM32`);
+          }
+        } else if (ackedCmd === 0x07) {
+          const bufMode = v.getUint8(2) !== 0;
+          showToast(`✔ CONFIRMED: DAC Buffer ${bufMode ? 'ENABLED (Mode 0)' : 'DISABLED (Mode 2)'}`);
+        } else if (ackedCmd >= 0x10 && ackedCmd <= 0x13) {
+          const chunk = v.getUint8(2);
+          showToast(`✔ CONFIRMED: AWG Block ${chunk + 1}/4 Verified`);
+        } else {
+          showToast(`✔ CONFIRMED: Command 0x${ackedCmd.toString(16).toUpperCase()} executed by STM32`);
+        }
+        haptics.tick();
+      }
+      // 0x82: Hardware NACK
+      else if (cmd === 0x82) {
+        const rejectedCmd = v.byteLength > 1 ? v.getUint8(1) : 0;
+        const reason = v.byteLength > 2 ? v.getUint8(2) : 0;
+        let reasonStr = "Rejected";
+        if (reason === 0xEE) reasonStr = "CRC Checksum Error";
+        else if (reason === 0x01) reasonStr = "Formula Syntax Error";
+        else if (reason === 0xFF) reasonStr = "Unknown Command";
+        showToast(`✘ STM32 NACK: CMD 0x${rejectedCmd.toString(16).toUpperCase()} (${reasonStr})`);
+        haptics.thump();
+      }
+    }
+
+    // --- PROTOCOL PACKET BUILDERS ---
+    function sendFullConfiguration() {
+      // 29-byte ChannelPacket
+      const buf = new ArrayBuffer(29);
+      const view = new DataView(buf);
+
+      const waveCode = state.waveform.charCodeAt(0);
+      view.setUint8(0, waveCode);
+      view.setFloat32(1, state.frequency, true);
+      view.setUint8(5, state.amplitude);
+      view.setInt8(6, state.offset);
+      view.setUint8(7, state.armed ? 1 : 0);
+      view.setUint8(8, state.dutyCycle);
+
+      const packet = buildPacket(0x01, new Uint8Array(buf));
+      sendBleRaw(packet);
+    }
+
+    function sendEquationToHardware(formula) {
+      state.waveform = 'e';
+      state.equationStr = formula;
+      const enc = new TextEncoder();
+      const bytes = enc.encode(formula.trim());
+      const packet = buildPacket(0x05, Array.from(bytes));
+      sendBleRaw(packet);
+      updateWaveformUI();
+      showToast("Uploaded equation to STM32 2048-sample VM");
+      haptics.thump();
+    }
+
+    function sendAwgToHardware() {
+      // Send in 4 sequential chunks of 16 bytes: CMD 0x10..0x13
+      showToast("Uploading 64 AWG points to STM32...");
+      for (let chunk = 0; chunk < 4; chunk++) {
+        const payload = [0x01]; // Channel 1 indicator
+        for (let i = 0; i < 16; i++) {
+          payload.push(state.awgSamples[chunk * 16 + i]);
+        }
+        const packet = buildPacket(0x10 + chunk, payload);
+        setTimeout(() => sendBleRaw(packet), chunk * 35);
+      }
+      setTimeout(() => {
+        state.waveform = 'c';
+        updateWaveformUI();
+        showToast("AWG Active on PA4 (64-pt continuous wrap)");
+        haptics.thump();
+      }, 160);
+    }
+
+    // --- DDS PHASE ACCUMULATOR MODEL (Fixed 1 MSPS) ---
+    function calculateDDS(freq) {
+      const SAMPLE_RATE = 1000000; // Fixed 1.000 MSPS
+      // Phase increment = (freq / Fs) * 2^32
+      const phaseInc = Math.round((freq / SAMPLE_RATE) * 4294967296);
+      // Actual output frequency from quantized increment
+      const actFout = (phaseInc / 4294967296) * SAMPLE_RATE;
+      const errPct = Math.abs(actFout - freq) / freq * 100;
+      const ptsPerCycle = Math.round(SAMPLE_RATE / freq);
+      return { phaseInc, actFout, errPct, ptsPerCycle, actFs: SAMPLE_RATE };
+    }
+
+    // --- UI CONTROLLERS & VALUE FORMATTERS ---
+    function updateFrequency(newFreq) {
+      state.frequency = Math.max(1, Math.min(128000, newFreq));
+      const f = state.frequency;
+      document.getElementById("dispFreqVal").innerText = f >= 1000 ? (f / 1000).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 3 }) : Math.round(f);
+
+      const dds = calculateDDS(f);
+      const actualFout = dds.actFout;
+      const errorPct = dds.errPct;
+      const ptsPerCycle = dds.ptsPerCycle;
+
+      state.actualFout = actualFout;
+      state.freqErrorPct = errorPct;
+      state.samplingRateMsps = 1.0;
+
+      document.getElementById("dispFreqSub").innerText = `${(f/1000).toFixed(4)} kHz // ACT: ${actualFout.toFixed(4)} Hz (${ptsPerCycle} pts/cyc)`;
+
+      // Synchronize slider and active decade button
+      document.querySelectorAll(".decade-btn").forEach(btn => {
+        const bMin = parseFloat(btn.dataset.min);
+        const bMax = parseFloat(btn.dataset.max);
+        if (f >= bMin && f <= bMax) {
+          btn.classList.add("active");
+          const slider = document.getElementById("sliderFreq");
+          slider.min = bMin;
+          slider.max = bMax;
+          slider.step = parseFloat(btn.dataset.step);
+          slider.value = f;
+        } else {
+          btn.classList.remove("active");
+        }
+      });
+
+      sendFullConfiguration();
+    }
+
+    function updateAmplitude(newAmp) {
+      state.amplitude = Math.max(0, Math.min(100, Math.round(newAmp)));
+      const vpp = (state.amplitude / 100 * 3.3).toFixed(2);
+      const vrms = (state.amplitude / 100 * 3.3 / (2 * Math.SQRT2)).toFixed(2);
+      
+      document.getElementById("dispAmpVal").innerText = `${state.amplitude}%`;
+      document.getElementById("dispAmpSub").innerText = `${vpp} Vpp // ${vrms} Vrms`;
+
+      sendFullConfiguration();
+    }
+
+    function updateOffset(newOffset) {
+      state.offset = Math.max(-128, Math.min(127, Math.round(newOffset)));
+      const v = ((state.offset / 128) * 1.65).toFixed(2);
+      document.getElementById("dispOffsetVal").innerText = `${v >= 0 ? '+' : ''}${v} V`;
+      document.getElementById("dispOffsetSub").innerText = `BIAS: ${(1.65 + parseFloat(v)).toFixed(2)} V (OFFSET ${state.offset})`;
+
+      sendFullConfiguration();
+    }
+
+    function updateDuty(newDuty) {
+      state.dutyCycle = Math.max(1, Math.min(99, Math.round(newDuty)));
+      document.getElementById("dispOffsetVal").innerText = `${state.dutyCycle}%`;
+      document.getElementById("dispOffsetSub").innerText = `PULSE HIGH: ${state.dutyCycle}% // LOW: ${100 - state.dutyCycle}%`;
+
+      sendFullConfiguration();
+    }
+
+    function updateWaveformUI() {
+      document.querySelectorAll(".wave-pill-btn").forEach(btn => {
+        if (btn.dataset.wave === state.waveform) {
+          btn.classList.add("active");
+        } else {
+          btn.classList.remove("active");
+        }
+      });
+
+      // Show duty cycle controls if PWM is selected
+      const isPwm = state.waveform === 'p';
+      const label = document.getElementById("labelOffsetOrDuty");
+      const slider = document.getElementById("sliderOffset");
+      const group = document.getElementById("groupOffsetQuick");
+
+      if (isPwm) {
+        label.innerText = "PWM DUTY";
+        slider.min = "1";
+        slider.max = "99";
+        slider.value = state.dutyCycle;
+        group.style.display = "none";
+        updateDuty(state.dutyCycle);
+      } else {
+        label.innerText = "DC OFFSET";
+        slider.min = "-128";
+        slider.max = "127";
+        slider.value = state.offset;
+        group.style.display = "flex";
+        updateOffset(state.offset);
+      }
+    }
+
+
+
+    // --- EQUATION PREVIEW CANVAS ---
+    function updateEquationPreview() {
+      const canvas = document.getElementById("eqnPreviewCanvas");
+      const ctx = canvas.getContext("2d");
+      canvas.width = canvas.parentElement.getBoundingClientRect().width * window.devicePixelRatio;
+      canvas.height = 90 * window.devicePixelRatio;
+      
+      const w = canvas.width;
+      const h = canvas.height;
+      ctx.fillStyle = "#050505";
+      ctx.fillRect(0, 0, w, h);
+
+      // Baseline
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, h/2); ctx.lineTo(w, h/2);
+      ctx.stroke();
+
+      // Plot formula
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 2 * window.devicePixelRatio;
+      ctx.beginPath();
+
+      const numPoints = 300;
+      for (let i = 0; i < numPoints; i++) {
+        const x = i / numPoints;
+        const t = x * 2 * Math.PI;
+        let y = 0;
+        try {
+          // Safe evaluation of simple math
+          y = evalFormulaJs(state.equationStr, x, t);
+        } catch(e) { y = Math.sin(t); }
+
+        const py = (h/2) - (Math.max(-1.5, Math.min(1.5, y)) * (h * 0.38));
+        if (i === 0) ctx.moveTo(i * (w / numPoints), py);
+        else ctx.lineTo(i * (w / numPoints), py);
+      }
+      ctx.stroke();
+    }
+
+    function evalFormulaJs(expr, x, t) {
+      // Clean and safe JS math evaluator
+      let code = expr
+        .replace(/\bsin\b/g, 'Math.sin')
+        .replace(/\bcos\b/g, 'Math.cos')
+        .replace(/\btan\b/g, 'Math.tan')
+        .replace(/\bsinc\b/g, '(v => Math.abs(v)<1e-5?1:Math.sin(v)/v)')
+        .replace(/\babs\b/g, 'Math.abs')
+        .replace(/\bexp\b/g, 'Math.exp')
+        .replace(/\bsqrt\b/g, 'Math.sqrt')
+        .replace(/\bpi\b/gi, 'Math.PI')
+        .replace(/\^/g, '**');
+      
+      const fn = new Function('x', 't', `return ${code};`);
+      const res = fn(x, t);
+      return isNaN(res) || !isFinite(res) ? 0 : res;
+    }
+
+    // --- AWG TOUCH SCULPTOR CANVAS ---
+    const awgCanvas = document.getElementById("awgCanvas");
+    const awgCtx = awgCanvas.getContext("2d");
+    let isDrawingAwg = false;
+
+    function resizeAwg() {
+      awgCanvas.width = awgCanvas.parentElement.getBoundingClientRect().width * window.devicePixelRatio;
+      awgCanvas.height = awgCanvas.parentElement.getBoundingClientRect().height * window.devicePixelRatio;
+      renderAwg();
+    }
+    setTimeout(resizeAwg, 80);
+
+    function renderAwg() {
+      const w = awgCanvas.width;
+      const h = awgCanvas.height;
+      awgCtx.fillStyle = "#040404";
+      awgCtx.fillRect(0, 0, w, h);
+
+      // Grid
+      awgCtx.strokeStyle = "rgba(255, 255, 255, 0.08)";
+      awgCtx.lineWidth = 1;
+      awgCtx.beginPath();
+      awgCtx.moveTo(0, h/2); awgCtx.lineTo(w, h/2);
+      awgCtx.stroke();
+
+      // Waveform Points and Line
+      awgCtx.strokeStyle = "#ffffff";
+      awgCtx.lineWidth = 2 * window.devicePixelRatio;
+      awgCtx.beginPath();
+
+      for (let i = 0; i < 64; i++) {
+        const px = (i / 63) * w;
+        const py = h - (state.awgSamples[i] / 255) * h;
+        if (i === 0) awgCtx.moveTo(px, py);
+        else awgCtx.lineTo(px, py);
+      }
+      awgCtx.stroke();
+
+      // Sample dots
+      awgCtx.fillStyle = "var(--red)";
+      for (let i = 0; i < 64; i += 4) {
+        const px = (i / 63) * w;
+        const py = h - (state.awgSamples[i] / 255) * h;
+        awgCtx.fillRect(px - 2, py - 2, 4, 4);
+      }
+    }
+
+    let lastAwgIdx = -1;
+    let lastAwgVal = -1;
+
+    function handleAwgPointer(e) {
+      const rect = awgCanvas.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      const x = Math.max(0, Math.min(rect.width, clientX - rect.left));
+      const y = Math.max(0, Math.min(rect.height, clientY - rect.top));
+
+      const idx = Math.min(63, Math.floor((x / rect.width) * 64));
+      const val = Math.max(0, Math.min(255, Math.round((1 - y / rect.height) * 255)));
+
+      if (lastAwgIdx !== -1 && lastAwgIdx !== idx) {
+        const step = lastAwgIdx < idx ? 1 : -1;
+        const count = Math.abs(idx - lastAwgIdx);
+        for (let i = 1; i <= count; i++) {
+          const curIdx = lastAwgIdx + i * step;
+          const curVal = Math.round(lastAwgVal + (val - lastAwgVal) * (i / count));
+          state.awgSamples[curIdx] = curVal;
+        }
+      } else {
+        state.awgSamples[idx] = val;
+      }
+
+      lastAwgIdx = idx;
+      lastAwgVal = val;
+      renderAwg();
+      haptics.tick();
+    }
+
+    awgCanvas.addEventListener('mousedown', (e) => { isDrawingAwg = true; lastAwgIdx = -1; handleAwgPointer(e); });
+    window.addEventListener('mousemove', (e) => { if (isDrawingAwg) handleAwgPointer(e); });
+    window.addEventListener('mouseup', () => { isDrawingAwg = false; lastAwgIdx = -1; });
+    awgCanvas.addEventListener('touchstart', (e) => { isDrawingAwg = true; lastAwgIdx = -1; handleAwgPointer(e); }, { passive: true });
+    window.addEventListener('touchmove', (e) => { if (isDrawingAwg) handleAwgPointer(e); }, { passive: true });
+    window.addEventListener('touchend', () => { isDrawingAwg = false; lastAwgIdx = -1; });
+
+    // --- TOAST MANAGER ---
+    function showToast(msg) {
+      const container = document.getElementById("toastContainer");
+      const toast = document.createElement("div");
+      toast.className = "toast";
+      toast.innerHTML = `<span class="brand-red-dot" style="width:6px; height:6px;"></span> ${msg}`;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(10px)';
+        setTimeout(() => toast.remove(), 300);
+      }, 3200);
+    }
+
+    // --- EVENT LISTENERS & WIRING ---
+    document.addEventListener("DOMContentLoaded", () => {
+      // BLE Connect
+      document.getElementById("btnBleConnect").addEventListener("click", connectBluetooth);
+
+      // Waveform Buttons
+      document.querySelectorAll(".wave-pill-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          state.waveform = btn.dataset.wave;
+          updateWaveformUI();
+          sendFullConfiguration();
+          haptics.thump();
+          showToast(`Waveform: ${btn.querySelector('.wave-name').innerText}`);
+        });
+      });
+
+      // Sliders
+      const sliderFreq = document.getElementById("sliderFreq");
+      sliderFreq.addEventListener("input", (e) => {
+        const val = parseFloat(e.target.value);
+        updateFrequency(val);
+        haptics.tick();
+      });
+
+      const sliderAmp = document.getElementById("sliderAmp");
+      sliderAmp.addEventListener("input", (e) => {
+        updateAmplitude(e.target.value);
+        haptics.tick();
+      });
+
+      const sliderOffset = document.getElementById("sliderOffset");
+      sliderOffset.addEventListener("input", (e) => {
+        if (state.waveform === 'p') {
+          updateDuty(e.target.value);
+        } else {
+          updateOffset(e.target.value);
+        }
+        haptics.tick();
+      });
+
+      // Decades Range Buttons
+      document.querySelectorAll(".decade-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          document.querySelectorAll(".decade-btn").forEach(b => b.classList.remove("active"));
+          btn.classList.add("active");
+          const bMin = parseFloat(btn.dataset.min);
+          const bMax = parseFloat(btn.dataset.max);
+          const bStep = parseFloat(btn.dataset.step);
+          sliderFreq.min = bMin;
+          sliderFreq.max = bMax;
+          sliderFreq.step = bStep;
+          let target = state.frequency;
+          if (target < bMin) target = bMin;
+          if (target > bMax) target = bMax;
+          sliderFreq.value = target;
+          updateFrequency(target);
+          haptics.click();
+        });
+      });
+
+      // Quick Amplitudes
+      document.querySelectorAll("[data-amp]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          document.querySelectorAll("[data-amp]").forEach(b => b.classList.remove("active"));
+          btn.classList.add("active");
+          sliderAmp.value = btn.dataset.amp;
+          updateAmplitude(btn.dataset.amp);
+          haptics.click();
+        });
+      });
+
+      // Quick Offsets
+      document.querySelectorAll("[data-off]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          document.querySelectorAll("[data-off]").forEach(b => b.classList.remove("active"));
+          btn.classList.add("active");
+          sliderOffset.value = btn.dataset.off;
+          updateOffset(btn.dataset.off);
+          haptics.click();
+        });
+      });
+
+      // Equation Inputs & Compile
+      const inputEqn = document.getElementById("inputEquation");
+      inputEqn.addEventListener("input", () => {
+        state.equationStr = inputEqn.value;
+        updateEquationPreview();
+      });
+
+      document.getElementById("btnCompileEqn").addEventListener("click", () => {
+        sendEquationToHardware(inputEqn.value);
+      });
+
+      document.querySelectorAll(".eqn-chip").forEach(chip => {
+        chip.addEventListener("click", () => {
+          inputEqn.value = chip.dataset.formula;
+          state.equationStr = inputEqn.value;
+          updateEquationPreview();
+          sendEquationToHardware(inputEqn.value);
+        });
+      });
+
+      // AWG Actions
+      document.getElementById("btnAwgClear").addEventListener("click", () => {
+        state.awgSamples.fill(128);
+        renderAwg();
+        haptics.click();
+      });
+
+      document.getElementById("btnAwgSmooth").addEventListener("click", () => {
+        // 3-point moving average smoothing
+        const copy = new Uint8Array(state.awgSamples);
+        for (let i = 0; i < 64; i++) {
+          const prev = copy[(i + 63) % 64];
+          const curr = copy[i];
+          const next = copy[(i + 1) % 64];
+          state.awgSamples[i] = Math.round((prev + curr * 2 + next) / 4);
+        }
+        renderAwg();
+        haptics.click();
+      });
+
+      document.getElementById("btnAwgSend").addEventListener("click", () => {
+        sendAwgToHardware();
+      });
+
+      // Generic Numeric Entry Modal (Frequency, Amplitude, Offset, PWM Duty)
+      const modal = document.getElementById("modalBackdrop");
+      const modalTitle = document.getElementById("modalTitle");
+      const modalInput = document.getElementById("modalInput");
+      let activeModalTarget = 'freq';
+
+      document.getElementById("boxFreq").addEventListener("click", () => {
+        activeModalTarget = 'freq';
+        modalTitle.innerText = "ENTER FREQUENCY (1 - 128,000 HZ)";
+        modalInput.step = "any";
+        modalInput.min = "1";
+        modalInput.max = "128000";
+        modalInput.value = state.frequency;
+        modal.style.display = "flex";
+        modalInput.focus();
+        haptics.click();
+      });
+
+      document.getElementById("boxAmp").addEventListener("click", () => {
+        activeModalTarget = 'amp';
+        modalTitle.innerText = "ENTER AMPLITUDE (0 - 100 %)";
+        modalInput.step = "1";
+        modalInput.min = "0";
+        modalInput.max = "100";
+        modalInput.value = state.amplitude;
+        modal.style.display = "flex";
+        modalInput.focus();
+        haptics.click();
+      });
+
+      document.getElementById("boxOffset").addEventListener("click", () => {
+        if (state.waveform === 'p') {
+          activeModalTarget = 'duty';
+          modalTitle.innerText = "ENTER PWM DUTY CYCLE (1 - 99 %)";
+          modalInput.step = "1";
+          modalInput.min = "1";
+          modalInput.max = "99";
+          modalInput.value = state.dutyCycle;
+        } else {
+          activeModalTarget = 'offset';
+          modalTitle.innerText = "ENTER DC OFFSET (-1.65V .. +1.65V)";
+          modalInput.step = "0.01";
+          modalInput.min = "-1.65";
+          modalInput.max = "1.65";
+          modalInput.value = ((state.offset / 128) * 1.65).toFixed(2);
+        }
+        modal.style.display = "flex";
+        modalInput.focus();
+        haptics.click();
+      });
+
+      document.getElementById("btnModalCancel").addEventListener("click", () => {
+        modal.style.display = "none";
+      });
+
+      document.getElementById("btnModalConfirm").addEventListener("click", () => {
+        const val = parseFloat(modalInput.value);
+        if (isNaN(val)) return;
+
+        if (activeModalTarget === 'freq') {
+          if (val >= 1 && val <= 128000) {
+            updateFrequency(val);
+            modal.style.display = "none";
+            haptics.thump();
+            showToast(`Frequency: ${val.toLocaleString()} Hz`);
+          } else {
+            showToast("Enter frequency between 1 and 128,000 Hz");
+          }
+        } else if (activeModalTarget === 'amp') {
+          if (val >= 0 && val <= 100) {
+            updateAmplitude(val);
+            document.getElementById("sliderAmp").value = Math.round(val);
+            modal.style.display = "none";
+            haptics.thump();
+            showToast(`Amplitude: ${Math.round(val)}%`);
+          } else {
+            showToast("Enter amplitude between 0% and 100%");
+          }
+        } else if (activeModalTarget === 'duty') {
+          if (val >= 1 && val <= 99) {
+            updateDuty(val);
+            document.getElementById("sliderOffset").value = Math.round(val);
+            modal.style.display = "none";
+            haptics.thump();
+            showToast(`PWM Duty: ${Math.round(val)}%`);
+          } else {
+            showToast("Enter duty cycle between 1% and 99%");
+          }
+        } else if (activeModalTarget === 'offset') {
+          if (val >= -1.65 && val <= 1.65) {
+            const rawOffset = Math.round((val / 1.65) * 128);
+            updateOffset(rawOffset);
+            document.getElementById("sliderOffset").value = rawOffset;
+            modal.style.display = "none";
+            haptics.thump();
+            showToast(`DC Offset: ${val >= 0 ? '+' : ''}${val.toFixed(2)} V`);
+          } else {
+            showToast("Enter offset between -1.65 V and +1.65 V");
+          }
+        }
+      });
+
+      // Start Engines
+      updateFrequency(1000);
+      updateAmplitude(100);
+      updateOffset(0);
+      updateWaveformUI();
+      updateEquationPreview();
+    });
+  </script>
+</body>
+</html>

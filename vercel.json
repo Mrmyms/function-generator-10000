@@ -1,9 +1,4 @@
 {
   "version": 2,
-  "name": "function-generator-10000",
-  "cleanUrls": true,
-  "rewrites": [
-    { "source": "/", "destination": "/web_app/index.html" },
-    { "source": "/(.*)", "destination": "/web_app/$1" }
-  ]
+  "cleanUrls": true
 }
