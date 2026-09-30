@@ -927,7 +927,11 @@
         showToast("Scanning for 'FuncGen-10000'...");
         
         bleDevice = await navigator.bluetooth.requestDevice({
-          filters: [{ name: "FuncGen-10000" }],
+          filters: [
+            { services: [BLE_SERVICE_UUID] },
+            { namePrefix: "FuncGen" },
+            { name: "FuncGen-10000" }
+          ],
           optionalServices: [BLE_SERVICE_UUID]
         });
 
